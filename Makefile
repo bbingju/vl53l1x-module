@@ -34,6 +34,22 @@ BUILD_DIR = build
 ######################################
 # source
 ######################################
+# VL53L1X driver sources
+VL53L1X_C_SOURCES = \
+vl53l1x/core/vl53l1_api.c \
+vl53l1x/core/vl53l1_api_calibration.c \
+vl53l1x/core/vl53l1_api_core.c \
+vl53l1x/core/vl53l1_api_debug.c \
+vl53l1x/core/vl53l1_api_preset_modes.c \
+vl53l1x/core/vl53l1_api_strings.c \
+vl53l1x/core/vl53l1_core.c \
+vl53l1x/core/vl53l1_core_support.c \
+vl53l1x/core/vl53l1_error_strings.c \
+vl53l1x/core/vl53l1_register_funcs.c \
+vl53l1x/core/vl53l1_silicon_core.c \
+vl53l1x/core/vl53l1_wait.c \
+vl53l1x/platform/vl53l1_platform.c
+
 # C sources
 C_SOURCES =  \
 Src/main.c \
@@ -54,6 +70,8 @@ Drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_pwr_ex.c \
 Drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_flash.c \
 Drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_flash_ex.c \
 Src/system_stm32f0xx.c
+
+C_SOURCES += $(VL53L1X_C_SOURCES)
 
 # ASM sources
 ASM_SOURCES =  \
@@ -108,6 +126,10 @@ C_DEFS =  \
 # AS includes
 AS_INCLUDES = 
 
+VL53L1X_C_INCLUDES = \
+-Ivl53l1x/core \
+-Ivl53l1x/platform
+
 # C includes
 C_INCLUDES =  \
 -IInc \
@@ -116,6 +138,7 @@ C_INCLUDES =  \
 -IDrivers/CMSIS/Device/ST/STM32F0xx/Include \
 -IDrivers/CMSIS/Include
 
+C_INCLUDES += $(VL53L1X_C_INCLUDES)
 
 # compile gcc flags
 ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
