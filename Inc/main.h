@@ -82,7 +82,7 @@
 /* #define USE_FULL_ASSERT    1U */
 
 /* USER CODE BEGIN Private defines */
-
+#define USE_RTT_FOR_DEBUG
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
