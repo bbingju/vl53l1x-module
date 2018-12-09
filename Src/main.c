@@ -44,6 +44,7 @@
 #ifdef USE_RTT_FOR_DEBUG
 #include "SEGGER_RTT.h"
 #endif
+#include "vl53l1_api.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -53,6 +54,16 @@ UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
+// I2C addresses of GPIO expanders on the X-NUCLEO-53L1A1
+#define EXPANDER_1_ADDR 0x84 // 0x42 << 1
+#define EXPANDER_2_ADDR 0x86 // 0x43 << 1
+
+VL53L1_Dev_t  vl53l1_dev;
+VL53L1_DEV    dev = &vl53l1_dev; 
+
+volatile int IntCount;
+#define isAutonomousExample 1 /* Allow to select either autonomous ranging or fast ranging example */
+#define isInterrupt 0 /* If isInterrupt = 1 then device working in interrupt mode, else device working in polling mode */
 
 /* USER CODE END PV */
 
@@ -64,6 +75,7 @@ static void MX_USART1_UART_Init(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
+void AutonomousLowPowerRangingTest(void);
 
 /* USER CODE END PFP */
 
@@ -73,6 +85,83 @@ static void MX_USART1_UART_Init(void);
 #else
 #define DBG_LOG(f_, ...)
 #endif
+
+/* Autonomous ranging loop*/
+void AutonomousLowPowerRangingTest(void)
+{
+    VL53L1_Error status;
+    static VL53L1_RangingMeasurementData_t RangingData;
+    DBG_LOG("Autonomous Ranging Test\n");
+    status = VL53L1_WaitDeviceBooted(dev);
+    if(status){
+        DBG_LOG("VL53L1_WaitDeviceBooted failed (%d)\n", status);
+        while(1);
+    }	
+    status = VL53L1_DataInit(dev);
+    if(status){
+        DBG_LOG("VL53L1_DataInit failed (%d)\n", status);
+        while(1);
+    }	
+    status = VL53L1_StaticInit(dev);
+    if(status){
+        DBG_LOG("VL53L1_StaticInit failed (%d)\n", status);
+        while(1);
+    }	
+    status = VL53L1_SetDistanceMode(dev, VL53L1_DISTANCEMODE_LONG);
+    if(status){
+        DBG_LOG("VL53L1_SetDistanceMode failed (%d)\n", status);
+        while(1);
+    }	
+    status = VL53L1_SetMeasurementTimingBudgetMicroSeconds(dev, 50000);
+    if(status){
+        DBG_LOG("VL53L1_SetMeasurementTimingBudgetMicroSeconds failed (%d)\n", status);
+        while(1);
+    }	
+    status = VL53L1_SetInterMeasurementPeriodMilliSeconds(dev, 500);
+    if(status){
+        DBG_LOG("VL53L1_SetInterMeasurementPeriodMilliSeconds failed (%d)\n", status);
+        while(1);
+    }	
+    status = VL53L1_StartMeasurement(dev);
+    if(status){
+        DBG_LOG("VL53L1_StartMeasurement failed (%d)\n", status);
+        while(1);
+    }	
+
+    if (isInterrupt){
+        do // interrupt mode
+        {
+            __WFI();
+            if(IntCount !=0 ){
+                IntCount=0;
+                status = VL53L1_GetRangingMeasurementData(dev, &RangingData);
+                if(status==0){
+                    DBG_LOG("%d,%d,%.2f,%.2f\n", RangingData.RangeStatus,RangingData.RangeMilliMeter,
+                           RangingData.SignalRateRtnMegaCps/65536.0,RangingData.AmbientRateRtnMegaCps/65336.0);
+                }
+                status = VL53L1_ClearInterruptAndStartMeasurement(dev);
+            }
+        }
+        while(1);
+    }
+    else{
+        do // polling mode
+        {
+            status = VL53L1_WaitMeasurementDataReady(dev);
+            if(!status)
+            {
+                status = VL53L1_GetRangingMeasurementData(dev, &RangingData);
+                if(status==0){
+                    DBG_LOG("%d,%d,%.2f,%.2f\n", RangingData.RangeStatus,RangingData.RangeMilliMeter,
+                           (RangingData.SignalRateRtnMegaCps/65536.0),RangingData.AmbientRateRtnMegaCps/65336.0);
+                }
+                status = VL53L1_ClearInterruptAndStartMeasurement(dev);
+            }
+        }
+        while (1);
+    }
+//  return status;
+}
 
 /* USER CODE END 0 */
 
@@ -84,7 +173,10 @@ static void MX_USART1_UART_Init(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
+  uint8_t buff[50];
+  uint8_t byteData;
+  uint16_t wordData;
+  VL53L1_RangingMeasurementData_t RangingData;
   /* USER CODE END 1 */
 
   /* MCU Configuration----------------------------------------------------------*/
@@ -109,6 +201,57 @@ int main(void)
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
   static int count = 0;
+  /* initialize vl53l1x communication parameters */
+  dev->I2cHandle = &hi2c1;
+  dev->I2cDevAddr = 0x52;
+
+  HAL_GPIO_WritePin(GPIOA, XSHUT1_Pin, GPIO_PIN_SET);
+  HAL_Delay(1);
+
+  VL53L1_RdByte(dev, 0x010F, &byteData);
+  DBG_LOG("VL53L1X Model_ID: %02X\n\r", byteData);
+  VL53L1_RdByte(dev, 0x0110, &byteData);
+  DBG_LOG("VL53L1X Module_Type: %02X\n\r", byteData);
+  VL53L1_RdWord(dev, 0x010F, &wordData);
+  DBG_LOG("VL53L1X: %02X\n\r", wordData);
+  AutonomousLowPowerRangingTest();
+
+  /* /\*** Initialize GPIO expanders ***\/ */
+  /* // Unused GPIO should be configured as outputs to minimize the power consumption */
+  /* buff[0] = 0x14; // GPDR (GPIO set direction register) */
+  /* buff[1] = 0xFF; // GPIO_0 - GPIO_7 */
+  /* buff[2] = 0xFF; // GPIO_8 - GPIO_15 */
+  /* HAL_I2C_Master_Transmit( &hi2c1, EXPANDER_1_ADDR, buff, 3, 0xFFFF ); */
+  /* HAL_I2C_Master_Transmit( &hi2c1, EXPANDER_2_ADDR, buff, 3, 0xFFFF ); */
+
+  /* // clear XSHUT (disable center module) -> expander 1, GPIO_15 */
+  /* buff[0] = 0x13; // GPSR + 1 ( GPIO set pin state register) */
+  /* HAL_I2C_Master_Transmit( &hi2c1, EXPANDER_1_ADDR, buff, 1, 0xFFFF ); */
+  /* HAL_I2C_Master_Receive( &hi2c1, EXPANDER_1_ADDR, buff, 1, 0xFFFF ); */
+  /* buff[1] = buff[0] & ~( 1 << ( 15 - 8 ) ); // clear GPIO_15 */
+  /* buff[0] = 0x13; // GPSR + 1 ( GPIO set pin state register) */
+  /* HAL_I2C_Master_Transmit( &hi2c1, EXPANDER_1_ADDR, buff, 2, 0xFFFF ); */
+
+  /* HAL_Delay( 2 ); // 2ms reset time */
+
+  /* // set XSHUT (enable center module) -> expander 1, GPIO_15 */
+  /* buff[0] = 0x13; // GPSR + 1 ( GPIO set pin state) */
+  /* HAL_I2C_Master_Transmit( &hi2c1, EXPANDER_1_ADDR, buff, 1, 0xFFFF ); */
+  /* HAL_I2C_Master_Receive( &hi2c1, EXPANDER_1_ADDR, buff, 1, 0xFFFF ); */
+  /* buff[1] = buff[0] | ( 1 << ( 15 - 8 ) ); // set GPIO_15 */
+  /* buff[0] = 0x13; // GPSR + 1 ( GPIO set pin state register) */
+  /* HAL_I2C_Master_Transmit( &hi2c1, EXPANDER_1_ADDR, buff, 2, 0xFFFF ); */
+
+  /* HAL_Delay( 2 ); */
+
+  /*** VL53L1X Initialization ***/
+  /* VL53L1_WaitDeviceBooted( dev ); */
+  /* VL53L1_DataInit( dev ); */
+  /* VL53L1_StaticInit( dev ); */
+  /* VL53L1_SetDistanceMode( dev, VL53L1_DISTANCEMODE_LONG ); */
+  /* VL53L1_SetMeasurementTimingBudgetMicroSeconds( dev, 50000 ); */
+  /* VL53L1_SetInterMeasurementPeriodMilliSeconds( dev, 500 ); */
+  /* VL53L1_StartMeasurement( dev ); */
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -119,8 +262,20 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-      DBG_LOG("Test printf %d\n", count++);
-      HAL_Delay(500);
+      VL53L1_WaitMeasurementDataReady( dev );
+
+      VL53L1_GetRangingMeasurementData( dev, &RangingData );
+
+      DBG_LOG( "%d: %d, %d, %.2f, %.2f\n\r", count++, RangingData.RangeStatus, RangingData.RangeMilliMeter,
+               ( RangingData.SignalRateRtnMegaCps / 65536.0 ), RangingData.AmbientRateRtnMegaCps / 65336.0 );
+      /* sDBG_LOG( (char*)buff, "%d, %d, %.2f, %.2f\n\r", RangingData.RangeStatus, RangingData.RangeMilliMeter, */
+      /*          ( RangingData.SignalRateRtnMegaCps / 65536.0 ), RangingData.AmbientRateRtnMegaCps / 65336.0 ); */
+      /* HAL_UART_Transmit( &huart2, buff, strlen( (char*)buff ), 0xFFFF ); */
+
+      VL53L1_ClearInterruptAndStartMeasurement( dev );
+
+      /* DBG_LOG("Test DBG_LOG %d\n\r", count++); */
+      HAL_Delay(100);
   }
   /* USER CODE END 3 */
 
@@ -139,13 +294,9 @@ void SystemClock_Config(void)
 
     /**Initializes the CPU, AHB and APB busses clocks 
     */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = 16;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL2;
-  RCC_OscInitStruct.PLL.PREDIV = RCC_PREDIV_DIV1;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI48;
+  RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
@@ -155,11 +306,11 @@ void SystemClock_Config(void)
     */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI48;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
@@ -189,7 +340,7 @@ static void MX_I2C1_Init(void)
 {
 
   hi2c1.Instance = I2C1;
-  hi2c1.Init.Timing = 0x00303D5B;
+  hi2c1.Init.Timing = 0x20303E5D;
   hi2c1.Init.OwnAddress1 = 0;
   hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
   hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
