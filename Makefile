@@ -22,7 +22,7 @@ TARGET = vl53l1x_module
 # debug build?
 DEBUG = 1
 # optimization
-OPT = -Og
+OPT = -Os
 
 
 #######################################
