@@ -53,11 +53,11 @@ I2C_HandleTypeDef hi2c1;
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
-#define SENSOR_NBR     3
+#define SENSOR_NBR     4
 /* Private variables ---------------------------------------------------------*/
 VL53L1_Dev_t  vl53l1_dev[SENSOR_NBR];
 VL53L1_DEV    dev;
-uint16_t XSHUTx[SENSOR_NBR] = { XSHUT1_Pin, XSHUT2_Pin, XSHUT3_Pin, /* XSHUT4_Pin, */
+uint16_t XSHUTx[SENSOR_NBR] = { XSHUT1_Pin, XSHUT2_Pin, XSHUT3_Pin, XSHUT4_Pin,
                                 /* XSHUT5_Pin, XSHUT6_Pin, XSHUT7_Pin, XSHUT8_Pin, */
                                 /* XSHUT9_Pin, XSHUT10_Pin, XSHUT11_Pin, XSHUT12_Pin, */ };
                                   
@@ -142,35 +142,35 @@ int main(void)
       /* DBG_LOG("VL53L1X Model_ID: %02X\n", byteData); */
 
       status = VL53L1_WaitDeviceBooted(dev);	
-        if (status){
-              DBG_LOG("VL53L1_WaitDeviceBooted failed (%d)\n", status);
-              while(1);
-          }
+      if (status){
+          DBG_LOG("VL53L1_WaitDeviceBooted failed (%d)\n", status);
+          while(1);
+      }
       status = VL53L1_DataInit(dev);
-        if (status){
-              DBG_LOG("VL53L1_DataInit failed (%d)\n", status);
-              while(1);
-          }
+      if (status){
+          DBG_LOG("VL53L1_DataInit failed (%d)\n", status);
+          while(1);
+      }
       status = VL53L1_StaticInit(dev);
-        if (status){
-              DBG_LOG("VL53L1_StaticInit failed (%d)\n", status);
-              while(1);
-          }
+      if (status){
+          DBG_LOG("VL53L1_StaticInit failed (%d)\n", status);
+          while(1);
+      }
       status = VL53L1_SetDistanceMode(dev, VL53L1_DISTANCEMODE_LONG);
-        if (status){
-              DBG_LOG("VL53L1_SetDistanceMode failed (%d)\n", status);
-              while(1);
-          }
+      if (status){
+          DBG_LOG("VL53L1_SetDistanceMode failed (%d)\n", status);
+          while(1);
+      }
       status = VL53L1_SetMeasurementTimingBudgetMicroSeconds(dev, 50000);
-        if (status){
-              DBG_LOG("VL53L1_SetMeasurementTimingBudgetMicroSeconds failed (%d)\n", status);
-              while(1);
-          }
+      if (status){
+          DBG_LOG("VL53L1_SetMeasurementTimingBudgetMicroSeconds failed (%d)\n", status);
+          while(1);
+      }
       status = VL53L1_SetInterMeasurementPeriodMilliSeconds(dev, 100);
-        if (status){
-              DBG_LOG("VL53L1_SetInterMeasurementPeriodMilliSeconds failed (%d)\n", status);
-              while(1);
-          }
+      if (status){
+          DBG_LOG("VL53L1_SetInterMeasurementPeriodMilliSeconds failed (%d)\n", status);
+          while(1);
+      }
   }  
 
   for (int i = 0; i < SENSOR_NBR; i++) {
@@ -185,7 +185,6 @@ int main(void)
   do {
       for (int i = 0; i < SENSOR_NBR; i++) { // polling mode
           dev = &vl53l1_dev[i];
-          /* dev->I2cDevAddr = sensor_addrs[i]; */
 
           /* status = VL53L1_StartMeasurement(dev); */
           /* if (status){ */
