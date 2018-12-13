@@ -121,7 +121,8 @@ int main(void)
   MX_USART1_UART_Init();
 
   /* USER CODE BEGIN 2 */
-  /* uint8_t sensor_addrs[2] = { 0x52, 0x54 }; */
+  DBG_LOG("sizeof vl53l1_dev = %d\r\n", sizeof (vl53l1_dev));
+
   uint8_t newI2C = 0x52;
 
   for (int i = 0; i < SENSOR_NBR; i++) {
