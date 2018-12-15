@@ -60,6 +60,7 @@ Drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_uart_ex.c
 
 C_SOURCES += $(VL53L1X_C_SOURCES)
 C_SOURCES += $(RTT_C_SOURCES)
+C_SOURCES += $(UART_C_SOURCES)
 
 # ASM sources
 ASM_SOURCES =  \
@@ -124,6 +125,7 @@ C_INCLUDES =  \
 
 C_INCLUDES += $(VL53L1X_C_INCLUDES)
 C_INCLUDES += $(RTT_C_INCLUDES)
+C_INCLUDES += $(UART_C_INCLUDES)
 
 # compile gcc flags
 ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections

@@ -7,6 +7,11 @@ Lib/RTT/SEGGER_RTT.c \
 Lib/RTT/SEGGER_RTT_printf.c \
 Lib/Syscalls/SEGGER_RTT_Syscalls_GCC.c
 
+# UART interface sources
+UART_C_INCLUDES =
+UART_C_SOURCES = \
+Src/uart.c \
+Src/cbuffer.c
 
 # VL53L1X driver sources
 VL53L1X_C_INCLUDES = \

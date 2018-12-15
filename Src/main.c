@@ -45,6 +45,7 @@
 #include "SEGGER_RTT.h"
 #endif
 #include "vl53l1_api.h"
+#include "uart.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -61,6 +62,8 @@ uint16_t XSHUTx[12] = { XSHUT1_Pin, XSHUT2_Pin, XSHUT3_Pin, XSHUT4_Pin,
                         XSHUT5_Pin, XSHUT6_Pin, XSHUT7_Pin, XSHUT8_Pin,
                         XSHUT9_Pin, XSHUT10_Pin, XSHUT11_Pin, XSHUT12_Pin, };
 
+uart_t uart_obj;
+CBUFFER_DEF_STATIC(uart_cbuf, 80);
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -120,7 +123,16 @@ int main(void)
   MX_USART1_UART_Init();
 
   /* USER CODE BEGIN 2 */
-  /* uint8_t sensor_addrs[2] = { 0x52, 0x54 }; */
+
+  uart_init(&uart_obj, &huart1, &uart_cbuf);
+
+  while (1) {
+      char test_str[60] = { 0 };
+      int count = 0;
+      sprintf(test_str, "%d: uart test\n", count++);
+      uart_send(&uart_obj, test_str, strlen(test_str) + 1);
+  }
+
   uint8_t newI2C = 0x52;
 
   for (int i = 0; i < SENSOR_NBR; i++) {
