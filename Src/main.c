@@ -57,10 +57,9 @@ UART_HandleTypeDef huart1;
 /* Private variables ---------------------------------------------------------*/
 VL53L1_Dev_t  vl53l1_dev[SENSOR_NBR];
 VL53L1_DEV    dev;
-uint16_t XSHUTx[SENSOR_NBR] = { XSHUT1_Pin, XSHUT2_Pin, XSHUT3_Pin, XSHUT4_Pin,
-                                /* XSHUT5_Pin, XSHUT6_Pin, XSHUT7_Pin, XSHUT8_Pin, */
-                                /* XSHUT9_Pin, XSHUT10_Pin, XSHUT11_Pin, XSHUT12_Pin, */ };
-                                  
+uint16_t XSHUTx[12] = { XSHUT1_Pin, XSHUT2_Pin, XSHUT3_Pin, XSHUT4_Pin,
+                        XSHUT5_Pin, XSHUT6_Pin, XSHUT7_Pin, XSHUT8_Pin,
+                        XSHUT9_Pin, XSHUT10_Pin, XSHUT11_Pin, XSHUT12_Pin, };
 
 /* USER CODE END PV */
 
