@@ -191,6 +191,9 @@ $(BUILD_DIR):
 clean:
 	-rm -fR $(BUILD_DIR)
 
+deploy:
+	rsync -av ../vl53l1x-module/ $(HOME)/works/vl53l1x-module/
+
 #######################################
 # dependencies
 #######################################
