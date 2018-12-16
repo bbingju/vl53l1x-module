@@ -10,6 +10,7 @@ Lib/Syscalls/SEGGER_RTT_Syscalls_GCC.c
 # UART interface sources
 UART_C_INCLUDES =
 UART_C_SOURCES = \
+Src/state.c \
 Src/uart.c \
 Src/cbuffer.c
 
