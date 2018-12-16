@@ -121,9 +121,11 @@ int main(void)
 
   while (1) {
       char test_str[60] = { 0 };
-      int count = 0;
-      sprintf(test_str, "%d: uart test\n", count++);
-      uart_send(&uart_obj, test_str, strlen(test_str) + 1);
+      static int count = 0;
+      sprintf(test_str, "%d: uart test\r\n", count++);
+      DBG_LOG("%s", test_str);
+      uart_send(&uart_obj, test_str, strlen(test_str) + 2);
+      HAL_Delay(500);
   }
 
   uint8_t newI2C = 0x52;
@@ -337,7 +339,7 @@ static void MX_USART1_UART_Init(void)
 {
 
   huart1.Instance = USART1;
-  huart1.Init.BaudRate = 38400;
+  huart1.Init.BaudRate = 115200;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
   huart1.Init.StopBits = UART_STOPBITS_1;
   huart1.Init.Parity = UART_PARITY_NONE;
