@@ -41,9 +41,7 @@
 #include "stm32f0xx_hal.h"
 
 /* USER CODE BEGIN Includes */
-#ifdef USE_RTT_FOR_DEBUG
-#include "SEGGER_RTT.h"
-#endif
+#include "debug.h"
 #include "vl53l1_api.h"
 #include "uart.h"
 /* USER CODE END Includes */
@@ -79,11 +77,6 @@ void AutonomousLowPowerRangingTest(VL53L1_DEV);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
-#ifdef USE_RTT_FOR_DEBUG
-#define DBG_LOG(f_, ...)    SEGGER_RTT_printf(0, (f_), ##__VA_ARGS__)
-#else
-#define DBG_LOG(f_, ...)
-#endif
 
 /* USER CODE END 0 */
 
