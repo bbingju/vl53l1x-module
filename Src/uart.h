@@ -8,6 +8,8 @@
 typedef struct uart_s {
     UART_HandleTypeDef *handle;
     cbuffer_t *cbuffer;
+
+    uint8_t tx_buffer[256];
 } uart_t;
 
 #ifdef __cplusplus
