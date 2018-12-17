@@ -21,8 +21,8 @@ void state_loop(state_t *obj)
         break;
 
     case STATE_IDLE:
-        if (obj->op.idle_func)
-            obj->op.idle_func(obj);
+        if (obj->ops.idle_func)
+            obj->ops.idle_func(obj);
         break;
             
     case STATE_STOPPED:
@@ -36,8 +36,8 @@ void state_loop(state_t *obj)
         break;
 
     case STATE_MEASURING:
-        if (obj->op.measure_func)
-            obj->op.measure_func(obj);
+        if (obj->ops.measure_func)
+            obj->ops.measure_func(obj);
         break;
 
     case STATE_CONFIG:
@@ -58,22 +58,22 @@ void state_transit(state_t *obj, event_type_e event)
     switch (event) {
     case EVENT_START:
         obj->curr_state = STATE_STARTED;
-        if (obj->op.start_func)
-            obj->op.start_func(obj);
+        if (obj->ops.start_func)
+            obj->ops.start_func(obj);
         DBG_LOG("STATE_STARTED\r\n");
         break;
 
     case EVENT_STOP:
         obj->curr_state = STATE_STOPPED;
-        if (obj->op.stop_func)
-            obj->op.stop_func(obj);
+        if (obj->ops.stop_func)
+            obj->ops.stop_func(obj);
         DBG_LOG("STATE_STOPPED\r\n");
         break;
 
     case EVENT_CONFIG:
         obj->curr_state = STATE_CONFIG;
-        if (obj->op.config_func)
-            obj->op.config_func(obj);
+        if (obj->ops.config_func)
+            obj->ops.config_func(obj);
         DBG_LOG("STATE_CONFIG\r\n");
         break;
 

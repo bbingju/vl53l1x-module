@@ -41,10 +41,17 @@
 #include "stm32f0xx_hal.h"
 
 /* USER CODE BEGIN Includes */
+//#define USE_OFFICIAL_API
+
 #include "debug.h"
-#include "vl53l1_api.h"
 #include "state.h"
 #include "uart.h"
+#ifdef USE_OFFICIAL_API
+#include "vl53l1_api.h"
+#else
+#include "VL53L1X.h"
+#endif  /* USE_OFFICIAL_API */
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -53,13 +60,14 @@ I2C_HandleTypeDef hi2c1;
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
+#ifdef USE_OFFICIAL_API
+#define SENSOR_START_IDX 0
 #define SENSOR_NBR     4
+#else
+#define SENSOR_START_IDX 0
+#define SENSOR_NBR     12
+#endif
 /* Private variables ---------------------------------------------------------*/
-VL53L1_Dev_t  vl53l1_dev[SENSOR_NBR];
-VL53L1_DEV    dev;
-uint16_t XSHUTx[12] = { XSHUT1_Pin, XSHUT2_Pin, XSHUT3_Pin, XSHUT4_Pin,
-                        XSHUT5_Pin, XSHUT6_Pin, XSHUT7_Pin, XSHUT8_Pin,
-                        XSHUT9_Pin, XSHUT10_Pin, XSHUT11_Pin, XSHUT12_Pin, };
 
 static void idle_callback(state_t *obj);
 static void stop_callback(state_t *obj);
@@ -67,19 +75,26 @@ static void start_callback(state_t *obj);
 static void measuring_callback(state_t *obj);
 static void config_callback(state_t *obj);
 
+
+#ifdef USE_OFFICIAL_API
+VL53L1_Dev_t  vl53l1_dev[SENSOR_NBR];
+VL53L1_DEV    dev;
+#else
+VL53L1X sensor[SENSOR_NBR];
+#endif /* USE_OFFICIAL_API */
+
+uint16_t XSHUTx[12] = { XSHUT1_Pin, XSHUT2_Pin, XSHUT3_Pin, XSHUT4_Pin,
+    XSHUT5_Pin, XSHUT6_Pin, XSHUT7_Pin, XSHUT8_Pin,
+    XSHUT9_Pin, XSHUT10_Pin, XSHUT11_Pin, XSHUT12_Pin, };
+
+
 static state_t state_obj = {
     .curr_state = STATE_NONE,
-    .op = {
-        .idle_func     = idle_callback,
-        .stop_func     = stop_callback,
-        .start_func    = start_callback,
-        .measure_func  = measuring_callback,
-        .config_func   = config_callback,
-    },
 };
 
 uart_t uart_obj;
 CBUFFER_DEF_STATIC(uart_rxbuf, 80);
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -90,8 +105,9 @@ static void MX_USART1_UART_Init(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
+#ifdef USE_OFFICIAL_API
 void AutonomousLowPowerRangingTest(VL53L1_DEV);
-
+#endif
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -100,7 +116,7 @@ static void idle_callback(state_t *obj)
     char cmd[8] = { 0 };
     DBG_LOG("read cmd from UART\r\n");
     
-    if (uart_receive(&uart_obj, cmd, 1, HAL_MAX_DELAY) == -1) {
+    if (uart_receive(&uart_obj, (uint8_t *) cmd, 1, HAL_MAX_DELAY) == -1) {
         DBG_LOG("%s error\r\n", __func__);
         return;
     }
@@ -111,31 +127,76 @@ static void idle_callback(state_t *obj)
 
 static void stop_callback(state_t *obj)
 {
+#ifndef USE_OFFICIAL_API
+    for (int i = SENSOR_START_IDX; i < SENSOR_START_IDX + SENSOR_NBR; i++) {
+        sensor[i].stopContinuous();
+    }
+
+    for (int i = SENSOR_START_IDX; i < SENSOR_START_IDX + SENSOR_NBR; i++) {
+        GPIO_TypeDef* gpio = (i >= 0 && i <= 7) ? GPIOA : GPIOB;
+        HAL_GPIO_WritePin(gpio, XSHUTx[i], GPIO_PIN_RESET);
+
+        sensor[i].resetKlass();
+    }
+#else
     VL53L1_Error status;
 
-    for (int i = 0; i < SENSOR_NBR; i++) {
-        dev = &vl53l1_dev[i];
+    for (int i = SENSOR_START_IDX; i < SENSOR_START_IDX + SENSOR_NBR; i++) {
+        dev = &vl53l1_dev[i - SENSOR_START_IDX];
         status = VL53L1_StopMeasurement(dev);
         if (status) {
             DBG_LOG("VL53L1_StopMeasurement failed (%d)\n", status);
             while(1);
         }
     }
+
+    for (int i = SENSOR_START_IDX; i < SENSOR_START_IDX + SENSOR_NBR; i++) {
+        GPIO_TypeDef* gpio = (i >= 0 && i <= 7) ? GPIOA : GPIOB;
+        HAL_GPIO_WritePin(gpio, XSHUTx[i], GPIO_PIN_RESET);
+    }
+#endif
 }
 
 static void start_callback(state_t *obj)
 {
+#ifndef USE_OFFICIAL_API
+    for (int i = SENSOR_START_IDX; i < SENSOR_START_IDX + SENSOR_NBR; i++) {
+        GPIO_TypeDef* gpio = (i >= 0 && i <= 7) ? GPIOA : GPIOB;
+        HAL_GPIO_WritePin(gpio, XSHUTx[i], GPIO_PIN_SET);
+        HAL_Delay(2);
+
+        // uint16_t model_id = sensor[i].readReg16Bit(0x010F);
+        // DBG_LOG("[%d] VL53L1X Model_ID: %02X\n", i, model_id);
+        // sensor[i].setAddress(sensor[i].getAddress() + i + 1);
+        // HAL_Delay(2);
+
+        if (!sensor[i].init()) {
+            DBG_LOG("Failed to detect and initialize sensor!\r\n");
+        }
+
+        sensor[i].setAddress(sensor[i].getAddress() + i + 1);
+
+        sensor[i].setTimeout(1200);
+
+        sensor[i].setDistanceMode(VL53L1X::Long);
+        sensor[i].setMeasurementTimingBudget(50000);
+    }
+
+    for (int i = SENSOR_START_IDX; i < SENSOR_START_IDX + SENSOR_NBR; i++) {
+        sensor[i].startContinuous(50);
+    }
+#else
     VL53L1_Error status;
     uint8_t newI2C = 0x52;
 
-    for (int i = 0; i < SENSOR_NBR; i++) {
+    for (int i = SENSOR_START_IDX; i < SENSOR_START_IDX + SENSOR_NBR; i++) {
 
         GPIO_TypeDef* gpio = (i >= 0 && i <= 7) ? GPIOA : GPIOB;
       
         HAL_GPIO_WritePin(gpio, XSHUTx[i], GPIO_PIN_SET);
         HAL_Delay(2);
 
-        dev = &vl53l1_dev[i];
+        dev = &vl53l1_dev[i - SENSOR_START_IDX];
         dev->I2cHandle = &hi2c1;
         dev->I2cDevAddr = 0x52;/* sensor_addrs[i]; */
         /* VL53L1_RdByte(dev, 0x010F, &byteData); */
@@ -177,25 +238,22 @@ static void start_callback(state_t *obj)
         }
     }  
 
-    for (int i = 0; i < SENSOR_NBR; i++) {
-        dev = &vl53l1_dev[i];
+    for (int i = SENSOR_START_IDX; i < SENSOR_START_IDX + SENSOR_NBR; i++) {
+        dev = &vl53l1_dev[i - SENSOR_START_IDX];
         status = VL53L1_StartMeasurement(dev);
         if (status){
             DBG_LOG("VL53L1_StartMeasurement failed (%d)\n", status);
             while(1);
         }
     }
+#endif
 }
 
 static void measuring_callback(state_t *obj)
 {
-    VL53L1_Error status;
-    VL53L1_RangingMeasurementData_t RangingData;
-    char measure_str[32] = { 0 };
-
     char cmd[8] = { 0 };
 
-    if (uart_receive(&uart_obj, cmd, 1, 10) == -1) {
+    if (uart_receive(&uart_obj, (uint8_t *) cmd, 1, 10) == -1) {
         goto start_measuring;
     }
     else {
@@ -205,9 +263,32 @@ static void measuring_callback(state_t *obj)
         return;
     }
 
-start_measuring:
-    for (int i = 0; i < SENSOR_NBR; i++) { // polling mode
-        dev = &vl53l1_dev[i];
+#ifndef USE_OFFICIAL_API
+  start_measuring:
+    char measure_str[32] = { 0 };
+    for (int i = SENSOR_START_IDX; i < SENSOR_START_IDX + SENSOR_NBR; i++) {
+        sensor[i].read();
+        sprintf(measure_str, "%d: %d,%d,%d,%d\r\n", i,
+                sensor[i].ranging_data.range_status,
+                sensor[i].ranging_data.range_mm,
+                sensor[i].ranging_data.peak_signal_count_rate_MCPS,
+                sensor[i].ranging_data.ambient_count_rate_MCPS);
+        uart_send(&uart_obj, measure_str, strlen(measure_str) + 2);
+
+        DBG_LOG("[%02d] range: %d\n", i, sensor[i].ranging_data.range_mm);
+        DBG_LOG("\tstatus: %s\n", VL53L1X::rangeStatusToString(sensor[i].ranging_data.range_status));
+        DBG_LOG("\tpeak signal: %d\n", sensor[i].ranging_data.peak_signal_count_rate_MCPS);
+        DBG_LOG("\tambient: %d\n", sensor[i].ranging_data.ambient_count_rate_MCPS);
+        // HAL_Delay(50);
+    }
+#else
+  start_measuring:
+    VL53L1_Error status;
+    VL53L1_RangingMeasurementData_t RangingData;
+    char measure_str[32] = { 0 };
+  
+    for (int i = SENSOR_START_IDX; i < SENSOR_START_IDX + SENSOR_NBR; i++) { // polling mode
+        dev = &vl53l1_dev[i - SENSOR_START_IDX];
 
         status = VL53L1_WaitMeasurementDataReady(dev);
         if (!status) {
@@ -222,6 +303,7 @@ start_measuring:
             status = VL53L1_ClearInterruptAndStartMeasurement(dev);
         }
     }
+#endif
 }
 
 static void config_callback(state_t *obj)
@@ -239,8 +321,6 @@ static void config_callback(state_t *obj)
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-  uint8_t byteData;
-  uint16_t wordData;
 
   /* USER CODE END 1 */
 
@@ -268,6 +348,12 @@ int main(void)
   /* USER CODE BEGIN 2 */
   uart_init(&uart_obj, &huart1, &uart_rxbuf);
   state_init(&state_obj, NULL);
+  struct state_ops_s *op = &state_obj.ops;
+  op->idle_func     = idle_callback;
+  op->stop_func     = stop_callback;
+  op->start_func    = start_callback;
+  op->measure_func  = measuring_callback;
+  op->config_func   = config_callback;
 
   /* USER CODE END 2 */
 
@@ -437,6 +523,11 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
+// for linking error
+extern "C"{
+  int _getpid(){ return -1;}
+  int _kill(int pid, int sig){ return -1; }
+}
 /* USER CODE END 4 */
 
 /**
@@ -466,7 +557,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   * @param  line: The line in file as a number.
   * @retval None
   */
-void _Error_Handler(char *file, int line)
+void _Error_Handler(char const *file, int line)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */

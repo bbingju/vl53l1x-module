@@ -22,7 +22,7 @@ TARGET = vl53l1x_module
 # debug build?
 DEBUG = 1
 # optimization
-OPT = -Os -std=c11
+OPT = -Os
 
 
 #######################################
@@ -36,7 +36,6 @@ BUILD_DIR = build
 ######################################
 # C sources
 C_SOURCES =  \
-Src/main.c \
 Src/stm32f0xx_it.c \
 Src/stm32f0xx_hal_msp.c \
 Drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_i2c.c \
@@ -58,9 +57,14 @@ Src/stm32f0xx_hal_timebase_TIM.c \
 Drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_uart.c \
 Drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_uart_ex.c
 
-C_SOURCES += $(VL53L1X_C_SOURCES)
+# C_SOURCES += $(VL53L1X_C_SOURCES)
 C_SOURCES += $(RTT_C_SOURCES)
 C_SOURCES += $(UART_C_SOURCES)
+
+CPP_SOURCES = \
+	Src/main.cpp
+
+CPP_SOURCES += Src/VL53L1X.cpp
 
 # ASM sources
 ASM_SOURCES =  \
@@ -75,11 +79,13 @@ PREFIX = arm-none-eabi-
 # either it can be added to the PATH environment variable.
 ifdef GCC_PATH
 CC = $(GCC_PATH)/$(PREFIX)gcc
+CPP = $(GCC_PATH)/$(PREFIX)g++
 AS = $(GCC_PATH)/$(PREFIX)gcc -x assembler-with-cpp
 CP = $(GCC_PATH)/$(PREFIX)objcopy
 SZ = $(GCC_PATH)/$(PREFIX)size
 else
 CC = $(PREFIX)gcc
+CPP = $(PREFIX)g++
 AS = $(PREFIX)gcc -x assembler-with-cpp
 CP = $(PREFIX)objcopy
 SZ = $(PREFIX)size
@@ -123,14 +129,16 @@ C_INCLUDES =  \
 -IDrivers/CMSIS/Device/ST/STM32F0xx/Include \
 -IDrivers/CMSIS/Include
 
-C_INCLUDES += $(VL53L1X_C_INCLUDES)
+#C_INCLUDES += $(VL53L1X_C_INCLUDES)
 C_INCLUDES += $(RTT_C_INCLUDES)
 C_INCLUDES += $(UART_C_INCLUDES)
 
 # compile gcc flags
 ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
 
-CFLAGS = $(MCU) $(C_DEFS) $(C_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
+CFLAGS = $(MCU) $(C_DEFS) $(C_INCLUDES) $(OPT) -std=gnu11 -Wall -fdata-sections -ffunction-sections
+
+CXXFLAGS = $(MCU) $(C_DEFS) $(C_INCLUDES) $(OPT) -std=gnu++11 -Wall -fdata-sections -ffunction-sections
 
 ifeq ($(DEBUG), 1)
 CFLAGS += -g -gdwarf-2
@@ -162,12 +170,18 @@ all: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).hex $(BUILD_DIR)/$(TARGET
 # list of objects
 OBJECTS = $(addprefix $(BUILD_DIR)/,$(notdir $(C_SOURCES:.c=.o)))
 vpath %.c $(sort $(dir $(C_SOURCES)))
+#list of cpp objects
+OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(CPP_SOURCES:.cpp=.o)))
+vpath %.cpp $(sort $(dir $(CPP_SOURCES)))
 # list of ASM program objects
 OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(ASM_SOURCES:.s=.o)))
 vpath %.s $(sort $(dir $(ASM_SOURCES)))
 
 $(BUILD_DIR)/%.o: %.c Makefile | $(BUILD_DIR) 
 	$(CC) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/$(notdir $(<:.c=.lst)) $< -o $@
+
+$(BUILD_DIR)/%.o: %.cpp Makefile | $(BUILD_DIR)
+	$(CPP) -c $(CXXFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/$(notdir $(<:.cpp=.lst)) $< -o $@
 
 $(BUILD_DIR)/%.o: %.s Makefile | $(BUILD_DIR)
 	$(AS) -c $(CFLAGS) $< -o $@
@@ -200,4 +214,3 @@ deploy:
 -include $(wildcard $(BUILD_DIR)/*.d)
 
 # *** EOF ***
-
