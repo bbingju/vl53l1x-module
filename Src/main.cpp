@@ -113,17 +113,22 @@ void AutonomousLowPowerRangingTest(VL53L1_DEV);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
+static int handle_req()
+{
+    
+}
+
 static void idle_callback(state_t *obj)
 {
     char cmd[8] = { 0 };
     DBG_LOG("read cmd from UART\r\n");
     
-    if (uart_receive(&uart_obj, (uint8_t *) cmd, 1, HAL_MAX_DELAY) == -1) {
-        DBG_LOG("%s error\r\n", __func__);
-        return;
-    }
+    // if (uart_receive(&uart_obj, (uint8_t *) cmd, 8, 500) == -1) {
+    //     // DBG_LOG("%s error\r\n", __func__);
+    //     return;
+    // }
 
-    if (cmd[0] == 's')
+    // if (cmd[0] == 's')
         state_transit(obj, EVENT_START);
 }
 

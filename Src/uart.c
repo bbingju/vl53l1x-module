@@ -121,9 +121,17 @@ int uart_receive(uart_t *obj, uint8_t *data, uint16_t size, uint32_t timeout)
 
     status = HAL_UART_Receive(obj->handle, rx_buffer, 128, timeout);
     if (status != HAL_OK) {
-        /* DBG_LOG("%s:%L HAL_UART_Recevie error (%d)\n", __func__, __LINE__, status); */
+        DBG_LOG("%s HAL_UART_Recevie error (%d)\n", __func__, status);
         return -1;
     }
+
+    DBG_LOG("%s: hexdump\r\n");
+    for (int i = 0; i < 128; i++) {
+        DBG_LOG("0x%02X ", rx_buffer[i]);
+        if (i % 10 == 9)
+            DBG_LOG("\r\n");
+    }
+    DBG_LOG("\r\n");
 
     if (rx_buffer[0] == PREAMBLE_OCTET &&
         rx_buffer[1] == PREAMBLE_OCTET)
