@@ -255,7 +255,13 @@ typedef struct __packed {
     uint16_t range_mm;
 } protocol_result_t;
 
-static protocol_result_t protocol_results[12] = { 0 };
+typedef struct __packed {
+    uint8_t type;
+    uint8_t length;
+    protocol_result_t results[12];
+} protocol_measuring_pl_t;
+
+static protocol_measuring_pl_t measuring_pl;
 
 static void measuring_callback(state_t *obj)
 {
@@ -275,17 +281,19 @@ static void measuring_callback(state_t *obj)
   start_measuring:
     for (int i = SENSOR_START_IDX; i < SENSOR_START_IDX + SENSOR_NBR; i++) {
         sensor[i].read();
-
-        protocol_results[i].id = i;
-        protocol_results[i].status = sensor[i].ranging_data.range_status;
-        protocol_results[i].range_mm = sensor[i].ranging_data.range_mm;
+        protocol_result_t *result = &measuring_pl.results[i];
+        result->id = i;
+        result->status = sensor[i].ranging_data.range_status;
+        result->range_mm = sensor[i].ranging_data.range_mm;
 
         DBG_LOG("[%02d] range: %d\n", i, sensor[i].ranging_data.range_mm);
         DBG_LOG("\tstatus: %s\n", VL53L1X::rangeStatusToString(sensor[i].ranging_data.range_status));
         DBG_LOG("\tpeak signal: %d\n", sensor[i].ranging_data.peak_signal_count_rate_MCPS);
         DBG_LOG("\tambient: %d\n", sensor[i].ranging_data.ambient_count_rate_MCPS);
     }
-    uart_send(&uart_obj, protocol_results, sizeof(protocol_results));
+    measuring_pl.type = 3;
+    measuring_pl.length = sizeof(measuring_pl.results);
+    uart_send(&uart_obj, &measuring_pl, sizeof(measuring_pl));
 #else
   start_measuring:
     VL53L1_Error status;

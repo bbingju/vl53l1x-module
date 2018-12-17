@@ -42,14 +42,8 @@ static const uint16_t crc_ccitt_lut[] =
 };
 
 // Special SLIP octet
-#define PREAMBLE_OCTET 0xC0
-#define END_OCTET      0xC1
-
-/* #ifdef __cplusplus */
-/* extern "C" { */
-/*     static uint16_t crc_from_buffer(uint8_t * buf, */
-/*                                     uint32_t len); */
-/* #endif */
+#define PREAMBLE_OCTET 0xFA
+#define END_OCTET      0xFB
 
 /**
  * Compute the crc of a frame
@@ -82,10 +76,10 @@ static int encode(uint8_t *buffer_in, uint16_t len_in,
 
     *(buffer_out + offset) = PREAMBLE_OCTET;
     offset++;
-    *(buffer_out + offset++) = PREAMBLE_OCTET;
+    *(buffer_out + offset) = PREAMBLE_OCTET;
     offset++;
 
-    memcpy(buffer_out + 3, buffer_in, len_in);
+    memcpy(buffer_out + offset, buffer_in, len_in);
     offset += len_in;
 
     *((uint16_t *)(buffer_out + offset)) = crc;
@@ -156,6 +150,14 @@ int uart_send(uart_t *obj, void *data, size_t size)
     int encoded_size = encode(data, size, obj->tx_buffer, 256);
     if (encoded_size == -1)
         return -1;
+
+    DBG_LOG("%s: encoded size = %d\r\n", __func__, encoded_size);
+    for (int i = 0; i < encoded_size; i++) {
+        DBG_LOG("0x%02X ", obj->tx_buffer[i]);
+        if (i % 10 == 9)
+            DBG_LOG("\r\n");
+    }
+    DBG_LOG("\r\n");
 
     HAL_StatusTypeDef status;
     status = HAL_UART_Transmit(obj->handle, obj->tx_buffer, encoded_size, 0xFFFF );
