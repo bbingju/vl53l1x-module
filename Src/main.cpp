@@ -249,6 +249,14 @@ static void start_callback(state_t *obj)
 #endif
 }
 
+typedef struct __packed {
+    uint8_t  id;
+    uint8_t  status;
+    uint16_t range_mm;
+} protocol_result_t;
+
+static protocol_result_t protocol_results[12] = { 0 };
+
 static void measuring_callback(state_t *obj)
 {
     char cmd[8] = { 0 };
@@ -268,19 +276,22 @@ static void measuring_callback(state_t *obj)
     char measure_str[32] = { 0 };
     for (int i = SENSOR_START_IDX; i < SENSOR_START_IDX + SENSOR_NBR; i++) {
         sensor[i].read();
-        sprintf(measure_str, "%d: %d,%d,%d,%d\r\n", i,
-                sensor[i].ranging_data.range_status,
-                sensor[i].ranging_data.range_mm,
-                sensor[i].ranging_data.peak_signal_count_rate_MCPS,
-                sensor[i].ranging_data.ambient_count_rate_MCPS);
-        uart_send(&uart_obj, measure_str, strlen(measure_str) + 2);
+        // sprintf(measure_str, "%d: %d,%d,%d,%d\r\n", i,
+        //         sensor[i].ranging_data.range_status,
+        //         sensor[i].ranging_data.range_mm,
+        //         sensor[i].ranging_data.peak_signal_count_rate_MCPS,
+        //         sensor[i].ranging_data.ambient_count_rate_MCPS);
+
+        protocol_results[i].id = i;
+        protocol_results[i].status = sensor[i].ranging_data.range_status;
+        protocol_results[i].range_mm = sensor[i].ranging_data.range_mm;
 
         DBG_LOG("[%02d] range: %d\n", i, sensor[i].ranging_data.range_mm);
         DBG_LOG("\tstatus: %s\n", VL53L1X::rangeStatusToString(sensor[i].ranging_data.range_status));
         DBG_LOG("\tpeak signal: %d\n", sensor[i].ranging_data.peak_signal_count_rate_MCPS);
         DBG_LOG("\tambient: %d\n", sensor[i].ranging_data.ambient_count_rate_MCPS);
-        // HAL_Delay(50);
     }
+    uart_send(&uart_obj, protocol_results, sizeof(protocol_results));
 #else
   start_measuring:
     VL53L1_Error status;
