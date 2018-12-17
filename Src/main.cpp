@@ -51,6 +51,7 @@
 #else
 #include "VL53L1X.h"
 #endif  /* USE_OFFICIAL_API */
+#include "protocol.h"
 #include <string.h>
 /* USER CODE END Includes */
 
@@ -95,6 +96,7 @@ static state_t state_obj = {
 uart_t uart_obj;
 CBUFFER_DEF_STATIC(uart_rxbuf, 80);
 
+protocol_frame_t tx_frame;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -249,20 +251,6 @@ static void start_callback(state_t *obj)
 #endif
 }
 
-typedef struct __packed {
-    uint8_t  id;
-    uint8_t  status;
-    uint16_t range_mm;
-} protocol_result_t;
-
-typedef struct __packed {
-    uint8_t type;
-    uint8_t length;
-    protocol_result_t results[12];
-} protocol_measuring_pl_t;
-
-static protocol_measuring_pl_t measuring_pl;
-
 static void measuring_callback(state_t *obj)
 {
     char cmd[8] = { 0 };
@@ -281,7 +269,7 @@ static void measuring_callback(state_t *obj)
   start_measuring:
     for (int i = SENSOR_START_IDX; i < SENSOR_START_IDX + SENSOR_NBR; i++) {
         sensor[i].read();
-        protocol_result_t *result = &measuring_pl.results[i];
+        tof_result_t *result = &tx_frame.payload.tof_result_payload[i];
         result->id = i;
         result->status = sensor[i].ranging_data.range_status;
         result->range_mm = sensor[i].ranging_data.range_mm;
@@ -291,9 +279,9 @@ static void measuring_callback(state_t *obj)
         DBG_LOG("\tpeak signal: %d\n", sensor[i].ranging_data.peak_signal_count_rate_MCPS);
         DBG_LOG("\tambient: %d\n", sensor[i].ranging_data.ambient_count_rate_MCPS);
     }
-    measuring_pl.type = 3;
-    measuring_pl.length = sizeof(measuring_pl.results);
-    uart_send(&uart_obj, &measuring_pl, sizeof(measuring_pl));
+    tx_frame.type = 3;
+    tx_frame.length = sizeof(tx_frame.payload.tof_result_payload);
+    uart_send(&uart_obj, &tx_frame, FRAME_SIZE(&tx_frame));
 #else
   start_measuring:
     VL53L1_Error status;
