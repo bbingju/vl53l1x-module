@@ -115,20 +115,23 @@ void AutonomousLowPowerRangingTest(VL53L1_DEV);
 /* USER CODE BEGIN 0 */
 static int handle_req()
 {
-    
+    return 0;
 }
 
 static void idle_callback(state_t *obj)
 {
-    char cmd[8] = { 0 };
-    DBG_LOG("read cmd from UART\r\n");
+    uint8_t req[16] = { 0 };
+    DBG_LOG("read req from UART\r\n");
     
-    // if (uart_receive(&uart_obj, (uint8_t *) cmd, 8, 500) == -1) {
+    // if (uart_receive(&uart_obj, req, 16, 500) == -1) {
     //     // DBG_LOG("%s error\r\n", __func__);
     //     return;
     // }
 
-    // if (cmd[0] == 's')
+    // uint8_t type = req[0];
+    // uint8_t length = req[1];
+
+    // if (type == FRAME_TYPE_START)
         state_transit(obj, EVENT_START);
 }
 
@@ -171,11 +174,6 @@ static void start_callback(state_t *obj)
         GPIO_TypeDef* gpio = (i >= 0 && i <= 7) ? GPIOA : GPIOB;
         HAL_GPIO_WritePin(gpio, XSHUTx[i], GPIO_PIN_SET);
         HAL_Delay(2);
-
-        // uint16_t model_id = sensor[i].readReg16Bit(0x010F);
-        // DBG_LOG("[%d] VL53L1X Model_ID: %02X\n", i, model_id);
-        // sensor[i].setAddress(sensor[i].getAddress() + i + 1);
-        // HAL_Delay(2);
 
         if (!sensor[i].init()) {
             DBG_LOG("Failed to detect and initialize sensor!\r\n");

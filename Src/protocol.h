@@ -12,6 +12,10 @@ typedef struct __packed {
     
 } tof_config_t;
 
+#define FRAME_TYPE_START      1
+#define FRAME_TYPE_STOP       2
+#define FRAME_TYPE_TOF_RESULT 3
+
 typedef struct __packed {
     uint8_t type;
     uint8_t length;

@@ -119,7 +119,7 @@ int uart_receive(uart_t *obj, uint8_t *data, uint16_t size, uint32_t timeout)
     HAL_StatusTypeDef status;
     uint8_t rx_buffer[128] = { 0 };
 
-    status = HAL_UART_Receive(obj->handle, rx_buffer, 128, timeout);
+    status = HAL_UART_Receive(obj->handle, rx_buffer, size, timeout);
     if (status != HAL_OK) {
         DBG_LOG("%s HAL_UART_Recevie error (%d)\n", __func__, status);
         return -1;
