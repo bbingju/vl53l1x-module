@@ -125,8 +125,8 @@ int uart_receive(uart_t *obj, uint8_t *data, uint16_t size, uint32_t timeout)
         return -1;
     }
 
-    DBG_LOG("%s: hexdump\r\n");
-    for (int i = 0; i < 128; i++) {
+    DBG_LOG("%s: hexdump\r\n", __func__);
+    for (int i = 0; i < size; i++) {
         DBG_LOG("0x%02X ", rx_buffer[i]);
         if (i % 10 == 9)
             DBG_LOG("\r\n");
@@ -137,9 +137,9 @@ int uart_receive(uart_t *obj, uint8_t *data, uint16_t size, uint32_t timeout)
         rx_buffer[1] == PREAMBLE_OCTET)
     {
         uint8_t length = rx_buffer[3];
-        if (length < 128 && rx_buffer[3 + length + 2] == END_OCTET) {
-            memcpy(data, &rx_buffer[2], length + 3);
-            return length + 3;
+        if (length < 128 && rx_buffer[4 + length + 2] == END_OCTET) {
+            memcpy(data, &rx_buffer[2], length + 2);
+            return length + 2;
         }
         /* int offset = 2; */
         /* int ret; */

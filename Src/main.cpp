@@ -122,17 +122,24 @@ static void idle_callback(state_t *obj)
 {
     uint8_t req[16] = { 0 };
     DBG_LOG("read req from UART\r\n");
-    
-    // if (uart_receive(&uart_obj, req, 16, 500) == -1) {
-    //     // DBG_LOG("%s error\r\n", __func__);
-    //     return;
-    // }
 
-    // uint8_t type = req[0];
-    // uint8_t length = req[1];
+    int ret = uart_receive(&uart_obj, req, 7, 0xffff);
+    if (ret == -1) {
+        // DBG_LOG("%s error\r\n", __func__);
+        return;
+    }
 
-    // if (type == FRAME_TYPE_START)
+    uint8_t type = req[0];
+    uint8_t length = req[1];
+    if (ret > 2) {
+        // data exist, do something
+    }
+    // DBG_LOG("%s: type (0x%02x), length (0x%02x)\n", __func__, type, length);
+
+    if (type == FRAME_TYPE_START) {
+        // DBG_LOG("%s: transit to start_state\n", __func__);
         state_transit(obj, EVENT_START);
+    }
 }
 
 static void stop_callback(state_t *obj)
@@ -256,13 +263,13 @@ static void start_callback(state_t *obj)
 
 static void measuring_callback(state_t *obj)
 {
-    char cmd[8] = { 0 };
+    char req[8] = { 0 };
 
-    if (uart_receive(&uart_obj, (uint8_t *) cmd, 1, 10) == -1) {
+    if (uart_receive(&uart_obj, (uint8_t *) req, 7, 300) == -1) {
         goto start_measuring;
     }
     else {
-        if (cmd[0] == 's') {
+        if (req[0] == FRAME_TYPE_STOP) {
             state_transit(obj, EVENT_STOP);
         }
         return;
