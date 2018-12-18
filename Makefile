@@ -142,6 +142,7 @@ CXXFLAGS = $(MCU) $(C_DEFS) $(C_INCLUDES) $(OPT) -std=gnu++11 -Wall -fdata-secti
 
 ifeq ($(DEBUG), 1)
 CFLAGS += -g -gdwarf-2
+CXXFLAGS += -g
 endif
 
 
