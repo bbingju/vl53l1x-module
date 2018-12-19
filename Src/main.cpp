@@ -100,7 +100,14 @@ CBUFFER_DEF_STATIC(uart_rxbuf, RX_BUFFER_SIZE);
 
 protocol_frame_t tx_frame;
 
-uint32_t measure_interval = 50;
+struct context_s {
+
+    uint32_t measure_interval;
+    uint8_t distance_mode;      // 0: short, 1: medium, 2: long, 3: unknown
+
+};
+
+struct context_s c;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -121,6 +128,13 @@ void AutonomousLowPowerRangingTest(VL53L1_DEV);
 static int handle_req()
 {
     return 0;
+}
+
+static void context_init()
+{
+    c.distance_mode = 3;
+    c.measure_interval = 100;   // ms
+
 }
 
 static void idle_callback(state_t *obj)
@@ -205,8 +219,32 @@ static void start_callback(state_t *obj)
 
         sensor[i].setTimeout(1200);
 
-        sensor[i].setDistanceMode(VL53L1X::Long);
+        if (c.distance_mode == 0)
+            sensor[i].setDistanceMode(VL53L1X::Short);
+        else if (c.distance_mode == 1)
+            sensor[i].setDistanceMode(VL53L1X::Medium);
+        else if (c.distance_mode == 2)
+            sensor[i].setDistanceMode(VL53L1X::Long);
+
         sensor[i].setMeasurementTimingBudget(50000);
+
+        // ROI config
+        sensor[i].getUserRoi();
+        DBG_LOG("[%d] before ROI setting: x1 (%d), y1 (%d), x2(%d), y2(%d)\n", i,
+                sensor[i].roi.TopLeftX, sensor[i].roi.TopLeftY,
+                sensor[i].roi.BotRightX, sensor[i].roi.BotRightY);
+
+        uint8_t x1, y1, x2, y2;
+        x1 = 4;
+        y1 = 7;
+        x2 = 7;
+        y2 = 4;
+        sensor[i].setUserRoi(x1, y1, x2, y2);
+
+        sensor[i].getUserRoi();
+        DBG_LOG("[%d] after ROI setting: x1 (%d), y1 (%d), x2(%d), y2(%d)\n", i,
+                sensor[i].roi.TopLeftX, sensor[i].roi.TopLeftY,
+                sensor[i].roi.BotRightX, sensor[i].roi.BotRightY);
     }
 
     for (int i = SENSOR_START_IDX; i < SENSOR_START_IDX + SENSOR_NBR; i++) {
@@ -219,7 +257,7 @@ static void start_callback(state_t *obj)
     for (int i = SENSOR_START_IDX; i < SENSOR_START_IDX + SENSOR_NBR; i++) {
 
         GPIO_TypeDef* gpio = (i >= 0 && i <= 7) ? GPIOA : GPIOB;
-      
+
         HAL_GPIO_WritePin(gpio, XSHUTx[i], GPIO_PIN_SET);
         HAL_Delay(2);
 
@@ -233,7 +271,7 @@ static void start_callback(state_t *obj)
         dev->I2cDevAddr = newI2C;
         /* DBG_LOG("VL53L1X Model_ID: %02X\n", byteData); */
 
-        status = VL53L1_WaitDeviceBooted(dev);	
+        status = VL53L1_WaitDeviceBooted(dev);
         if (status){
             DBG_LOG("VL53L1_WaitDeviceBooted failed (%d)\n", status);
             while(1);
@@ -263,7 +301,7 @@ static void start_callback(state_t *obj)
             DBG_LOG("VL53L1_SetInterMeasurementPeriodMilliSeconds failed (%d)\n", status);
             while(1);
         }
-    }  
+    }
 
     for (int i = SENSOR_START_IDX; i < SENSOR_START_IDX + SENSOR_NBR; i++) {
         dev = &vl53l1_dev[i - SENSOR_START_IDX];
@@ -314,7 +352,7 @@ static void measuring_callback(state_t *obj)
     VL53L1_Error status;
     VL53L1_RangingMeasurementData_t RangingData;
     char measure_str[32] = { 0 };
-  
+
     for (int i = SENSOR_START_IDX; i < SENSOR_START_IDX + SENSOR_NBR; i++) { // polling mode
         dev = &vl53l1_dev[i - SENSOR_START_IDX];
 
@@ -337,8 +375,8 @@ static void measuring_callback(state_t *obj)
 
     DBG_LOG("measure: elapsed time %d\n", measure_elapsed_tick);
 
-    if (measure_interval > measure_elapsed_tick)
-        HAL_Delay(measure_interval - measure_elapsed_tick);
+    if (c.measure_interval > measure_elapsed_tick)
+        HAL_Delay(c.measure_interval - measure_elapsed_tick);
 
     // char req[32] = { 0 };
 
@@ -401,6 +439,7 @@ int main(void)
   op->start_func    = start_callback;
   op->measure_func  = measuring_callback;
   op->config_func   = config_callback;
+  context_init();
 
   /* USER CODE END 2 */
 
