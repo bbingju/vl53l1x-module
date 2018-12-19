@@ -59,6 +59,8 @@
 I2C_HandleTypeDef hi2c1;
 
 UART_HandleTypeDef huart1;
+DMA_HandleTypeDef hdma_usart1_rx;
+DMA_HandleTypeDef hdma_usart1_tx;
 
 /* USER CODE BEGIN PV */
 #ifdef USE_OFFICIAL_API
@@ -94,7 +96,7 @@ static state_t state_obj = {
 };
 
 uart_t uart_obj;
-CBUFFER_DEF_STATIC(uart_rxbuf, 80);
+CBUFFER_DEF_STATIC(uart_rxbuf, RX_BUFFER_SIZE);
 
 protocol_frame_t tx_frame;
 /* USER CODE END PV */
@@ -102,6 +104,7 @@ protocol_frame_t tx_frame;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_USART1_UART_Init(void);
 
@@ -120,8 +123,8 @@ static int handle_req()
 
 static void idle_callback(state_t *obj)
 {
-    uint8_t req[16] = { 0 };
-    DBG_LOG("read req from UART\r\n");
+    uint8_t req[32] = { 0 };
+    // DBG_LOG("read req from UART\r\n");
 
     int ret = uart_receive(&uart_obj, req, 7, 0xffff);
     if (ret == -1) {
@@ -137,7 +140,17 @@ static void idle_callback(state_t *obj)
     // DBG_LOG("%s: type (0x%02x), length (0x%02x)\n", __func__, type, length);
 
     if (type == FRAME_TYPE_START) {
-        // DBG_LOG("%s: transit to start_state\n", __func__);
+        DBG_LOG("%s: transit to start_state\n", __func__);
+
+        /* Test */
+        // tx_frame.type = FRAME_TYPE_STOP;
+        // tx_frame.length = 0;
+        // uart_send(&uart_obj, &tx_frame, FRAME_SIZE(&tx_frame));
+
+        // tx_frame.type = FRAME_TYPE_START;
+        // tx_frame.length = 0;
+        // uart_send(&uart_obj, &tx_frame, FRAME_SIZE(&tx_frame));
+
         state_transit(obj, EVENT_START);
     }
 }
@@ -263,17 +276,17 @@ static void start_callback(state_t *obj)
 
 static void measuring_callback(state_t *obj)
 {
-    char req[8] = { 0 };
+    // char req[32] = { 0 };
 
-    if (uart_receive(&uart_obj, (uint8_t *) req, 7, 300) == -1) {
-        goto start_measuring;
-    }
-    else {
-        if (req[0] == FRAME_TYPE_STOP) {
-            state_transit(obj, EVENT_STOP);
-        }
-        return;
-    }
+    // if (uart_receive(&uart_obj, (uint8_t *) req, 32, 300) == -1) {
+    //     goto start_measuring;
+    // }
+    // else {
+    //     if (req[0] == FRAME_TYPE_STOP) {
+    //         state_transit(obj, EVENT_STOP);
+    //     }
+    //     return;
+    // }
 
 #ifndef USE_OFFICIAL_API
   start_measuring:
@@ -289,7 +302,7 @@ static void measuring_callback(state_t *obj)
         DBG_LOG("\tpeak signal: %d\n", sensor[i].ranging_data.peak_signal_count_rate_MCPS);
         DBG_LOG("\tambient: %d\n", sensor[i].ranging_data.ambient_count_rate_MCPS);
     }
-    tx_frame.type = 3;
+    tx_frame.type = FRAME_TYPE_TOF_RESULT;
     tx_frame.length = sizeof(tx_frame.payload.tof_result_payload);
     uart_send(&uart_obj, &tx_frame, FRAME_SIZE(&tx_frame));
 #else
@@ -315,6 +328,18 @@ static void measuring_callback(state_t *obj)
         }
     }
 #endif
+
+    char req[32] = { 0 };
+
+    if (uart_receive(&uart_obj, (uint8_t *) req, 32) == -1) {
+        return;
+        // goto start_measuring;
+    }
+    else {
+        if (req[0] == FRAME_TYPE_STOP) {
+            state_transit(obj, EVENT_STOP);
+        }
+    }
 }
 
 static void config_callback(state_t *obj)
@@ -353,6 +378,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_I2C1_Init();
   MX_USART1_UART_Init();
 
@@ -372,6 +398,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
@@ -487,6 +514,21 @@ static void MX_USART1_UART_Init(void)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
+
+}
+
+/** 
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void) 
+{
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA1_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  /* DMA1_Channel2_3_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel2_3_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel2_3_IRQn);
 
 }
 

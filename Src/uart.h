@@ -4,12 +4,14 @@
 #include <stdbool.h>
 #include "stm32f0xx_hal.h"
 #include "cbuffer.h"
+#define RX_BUFFER_SIZE 256
+#define TX_BUFFER_SIZE 256
 
 typedef struct uart_s {
     UART_HandleTypeDef *handle;
     cbuffer_t *cbuffer;
 
-    uint8_t tx_buffer[256];
+    uint8_t tx_buffer[TX_BUFFER_SIZE];
 } uart_t;
 
 #ifdef __cplusplus

@@ -42,8 +42,11 @@ static const uint16_t crc_ccitt_lut[] =
 };
 
 // Special SLIP octet
-#define PREAMBLE_OCTET 0xFA
-#define END_OCTET      0xFB
+#define PREAMBLE_OCTET 0xFD
+#define END_OCTET      0xFE
+
+__IO ITStatus UartReady = RESET;
+__IO ITStatus UartTxCompleted = RESET;
 
 /**
  * Compute the crc of a frame
@@ -168,11 +171,47 @@ int uart_send(uart_t *obj, void *data, size_t size)
     DBG_LOG("\r\n");
 
     HAL_StatusTypeDef status;
-    status = HAL_UART_Transmit(obj->handle, obj->tx_buffer, encoded_size, 0xFFFF );
+    UartTxCompleted = RESET;
+    status = HAL_UART_Transmit_DMA(obj->handle, obj->tx_buffer, encoded_size);
     if (status != HAL_OK) {
-        DBG_LOG("%s:%L HAL_UART_Transmit error (%d)\n", __func__, __LINE__, status);
+        DBG_LOG("%s:%L HAL_UART_Transmit_DMA error (%d)\n", __func__, __LINE__, status);
         return -1;
     }
 
+    while (1) {
+        if (UartTxCompleted == SET) {
+            HAL_UART_DMAStop(obj->handle);
+            break;
+        }
+    }
+    UartTxCompleted = RESET;
+
     return encoded_size;
+}
+
+/**
+  * @brief  Rx Transfer completed callback
+  * @param  UartHandle: UART handle
+  * @note   This example shows a simple way to report end of DMA Rx transfer, and 
+  *         you can add your own implementation.
+  * @retval None
+  */
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *Handle)
+{
+    /* Set transmission flag: trasfer complete*/
+    if (Handle->RxState == HAL_UART_STATE_READY) {
+        DBG_LOG("%s\n", __func__);
+    }
+    UartReady = SET;
+}
+
+/**
+  * @brief Tx Transfer completed callback.
+  * @param huart UART handle.
+  * @retval None
+  */
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+{
+    DBG_LOG("%s\n", __func__);
+    UartTxCompleted = SET;
 }
