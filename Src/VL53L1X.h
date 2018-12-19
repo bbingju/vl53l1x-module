@@ -1268,6 +1268,15 @@ public:
 
     RangingData ranging_data;
 
+    struct UserRoi {
+        uint8_t TopLeftX;
+        uint8_t TopLeftY;
+        uint8_t BotRightX;
+        uint8_t BotRightY;
+    };
+
+    UserRoi roi;
+
     uint8_t last_status; // status of last I2C transmission
 
     VL53L1X();
@@ -1306,7 +1315,10 @@ public:
     bool timeoutOccurred();
     void resetKlass();
 
-  private:
+    int setUserRoi(uint8_t TopLeftX, uint8_t TopLeftY, uint8_t BotRightX, uint8_t BotRightY);
+    int getUserRoi();
+
+private:
 
     // The Arduino two-wire interface uses a 7-bit number for the address,
     // and sets the last bit correctly based on reads and writes

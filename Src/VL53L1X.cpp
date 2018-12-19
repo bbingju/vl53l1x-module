@@ -147,7 +147,7 @@ bool VL53L1X::init(bool io_2v8)
 {
     // check model ID and module type registers (values specified in datasheet)
     uint16_t value = readReg16Bit(IDENTIFICATION__MODEL_ID);
-    if (value != 0xEACC) { 
+    if (value != 0xEACC) {
         DBG_LOG("IDENTIFICATION__MODEL_ID 0x%04X\r\n", value);
         return false;
     }
@@ -802,7 +802,7 @@ void VL53L1X::readResults()
     results.final_crosstalk_corrected_range_mm_sd0 |=           buffer[14];      // low byte
     results.peak_signal_count_rate_crosstalk_corrected_mcps_sd0  = (uint16_t)buffer[15] << 8; // high byte
     results.peak_signal_count_rate_crosstalk_corrected_mcps_sd0 |=           buffer[16];      // low byte
-    
+
     // Wire.requestFrom(address, (uint8_t)17);
 
 // 0    // results.range_status = Wire.read();
@@ -1040,4 +1040,92 @@ void VL53L1X::resetKlass()
     saved_vhv_init = 0;
     saved_vhv_timeout = 0;
     distance_mode = Unknown;
+}
+
+int VL53L1X::setUserRoi(uint8_t TopLeftX, uint8_t TopLeftY, uint8_t BotRightX, uint8_t BotRightY)
+{
+    uint8_t x_centre, y_centre, width, height;
+
+    /* Negative check are not necessary because value is unsigned */
+    if ((TopLeftX > 15) || (TopLeftY > 15) ||
+        (BotRightX > 15) || (BotRightY > 15))
+        return -4;              // VL53L1_ERROR_INVALID_PARAMS
+
+    if ((TopLeftX > BotRightX) || (TopLeftY < BotRightY))
+        return -4;              // invalid params
+
+    x_centre = (BotRightX + TopLeftX  + 1) / 2;
+    y_centre = (TopLeftY  + BotRightY + 1) / 2;
+    width    = (BotRightX - TopLeftX);
+    height   = (TopLeftY  - BotRightY);
+    if ((width < 3) || (height < 3))
+        return -4;              // invalid params
+
+    roi.TopLeftX  = TopLeftX;
+    roi.TopLeftY  = TopLeftY;
+    roi.BotRightX = BotRightX;
+    roi.BotRightY = BotRightY;
+
+    /**
+     *  Encodes the input array(row,col) location as SPAD number.
+     */
+    uint8_t pspad_number;
+    if (y_centre > 7) {
+        pspad_number = 128 + (x_centre << 3) + (15 - y_centre);
+    } else {
+        pspad_number = ((15 - x_centre) << 3) + y_centre;
+    }
+    writeReg(ROI_CONFIG__USER_ROI_CENTRE_SPAD, pspad_number);
+
+    /* merge x and y sizes
+     *
+     * Important: the sense of the device width and height is swapped
+     * versus the API sense
+     *
+     * MS Nibble = height
+     * LS Nibble = width
+     *
+     * VL53L1_encode_zone_size()
+     */
+    uint8_t encoded_xy_size = (height << 4) + width;
+    writeReg(ROI_CONFIG__USER_ROI_REQUESTED_GLOBAL_XY_SIZE, encoded_xy_size);
+
+    return 0;
+}
+
+int VL53L1X::getUserRoi()
+{
+    /**
+     *  Decodes the array (row,col) location from
+     *  the input SPAD number
+     */
+    uint8_t spad_number = readReg(ROI_CONFIG__USER_ROI_CENTRE_SPAD);
+    uint8_t y_centre, x_centre;
+    if (spad_number > 127) {
+        y_centre = 8 + ((255-spad_number) & 0x07);
+        x_centre = (spad_number-128) >> 3;
+    } else {
+        y_centre = spad_number & 0x07;
+        x_centre = (127-spad_number) >> 3;
+    }
+
+    /* extract x and y sizes
+     *
+     * Important: the sense of the device width and height is swapped
+     * versus the API sense
+     *
+     * MS Nibble = height
+     * LS Nibble = width
+     */
+
+    uint8_t encoded_xy_size = readReg(ROI_CONFIG__USER_ROI_REQUESTED_GLOBAL_XY_SIZE);
+    uint8_t height = encoded_xy_size >> 4;
+    uint8_t width  = encoded_xy_size & 0x0F;
+
+    roi.TopLeftX =  (2 * x_centre - width) >> 1;
+	roi.TopLeftY =  (2 * y_centre + height) >> 1;
+	roi.BotRightX = (2 * x_centre + width) >> 1;
+	roi.BotRightY = (2 * y_centre - height) >> 1;
+
+    return 0;
 }
