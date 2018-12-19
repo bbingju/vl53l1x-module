@@ -99,6 +99,8 @@ uart_t uart_obj;
 CBUFFER_DEF_STATIC(uart_rxbuf, RX_BUFFER_SIZE);
 
 protocol_frame_t tx_frame;
+
+uint32_t measure_interval = 50;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -288,6 +290,8 @@ static void measuring_callback(state_t *obj)
     //     return;
     // }
 
+    uint32_t measure_start_tick, measure_elapsed_tick;
+    measure_start_tick = HAL_GetTick();
 #ifndef USE_OFFICIAL_API
   start_measuring:
     for (int i = SENSOR_START_IDX; i < SENSOR_START_IDX + SENSOR_NBR; i++) {
@@ -297,10 +301,10 @@ static void measuring_callback(state_t *obj)
         result->status = sensor[i].ranging_data.range_status;
         result->range_mm = sensor[i].ranging_data.range_mm;
 
-        DBG_LOG("[%02d] range: %d\n", i, sensor[i].ranging_data.range_mm);
-        DBG_LOG("\tstatus: %s\n", VL53L1X::rangeStatusToString(sensor[i].ranging_data.range_status));
-        DBG_LOG("\tpeak signal: %d\n", sensor[i].ranging_data.peak_signal_count_rate_MCPS);
-        DBG_LOG("\tambient: %d\n", sensor[i].ranging_data.ambient_count_rate_MCPS);
+        // DBG_LOG("[%02d] range: %d\n", i, sensor[i].ranging_data.range_mm);
+        // DBG_LOG("\tstatus: %s\n", VL53L1X::rangeStatusToString(sensor[i].ranging_data.range_status));
+        // DBG_LOG("\tpeak signal: %d\n", sensor[i].ranging_data.peak_signal_count_rate_MCPS);
+        // DBG_LOG("\tambient: %d\n", sensor[i].ranging_data.ambient_count_rate_MCPS);
     }
     tx_frame.type = FRAME_TYPE_TOF_RESULT;
     tx_frame.length = sizeof(tx_frame.payload.tof_result_payload);
@@ -329,17 +333,23 @@ static void measuring_callback(state_t *obj)
     }
 #endif
 
-    char req[32] = { 0 };
+    measure_elapsed_tick = HAL_GetTick() - measure_start_tick;
 
-    if (uart_receive(&uart_obj, (uint8_t *) req, 32) == -1) {
-        return;
-        // goto start_measuring;
-    }
-    else {
-        if (req[0] == FRAME_TYPE_STOP) {
-            state_transit(obj, EVENT_STOP);
-        }
-    }
+    DBG_LOG("measure: elapsed time %d\n", measure_elapsed_tick);
+
+    if (measure_interval > measure_elapsed_tick)
+        HAL_Delay(measure_interval - measure_elapsed_tick);
+
+    // char req[32] = { 0 };
+
+    // if (uart_receive(&uart_obj, (uint8_t *) req, 32, 300) == -1) {
+    //     return;
+    // }
+    // else {
+    //     if (req[0] == FRAME_TYPE_STOP) {
+    //         state_transit(obj, EVENT_STOP);
+    //     }
+    // }
 }
 
 static void config_callback(state_t *obj)

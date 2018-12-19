@@ -162,13 +162,13 @@ int uart_send(uart_t *obj, void *data, size_t size)
     if (encoded_size == -1)
         return -1;
 
-    DBG_LOG("%s: encoded size = %d\r\n", __func__, encoded_size);
-    for (int i = 0; i < encoded_size; i++) {
-        DBG_LOG("0x%02X ", obj->tx_buffer[i]);
-        if (i % 10 == 9)
-            DBG_LOG("\r\n");
-    }
-    DBG_LOG("\r\n");
+    /* DBG_LOG("%s: encoded size = %d\r\n", __func__, encoded_size); */
+    /* for (int i = 0; i < encoded_size; i++) { */
+    /*     DBG_LOG("0x%02X ", obj->tx_buffer[i]); */
+    /*     if (i % 10 == 9) */
+    /*         DBG_LOG("\r\n"); */
+    /* } */
+    /* DBG_LOG("\r\n"); */
 
     HAL_StatusTypeDef status;
     UartTxCompleted = RESET;
@@ -212,6 +212,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *Handle)
   */
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
-    DBG_LOG("%s\n", __func__);
+    /* DBG_LOG("%s\n", __func__); */
     UartTxCompleted = SET;
 }
