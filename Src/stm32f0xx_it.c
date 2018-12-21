@@ -36,12 +36,20 @@
 #include "stm32f0xx_it.h"
 
 /* USER CODE BEGIN 0 */
+#include <string.h>
+#include "context.h"
+#include "protocol.h"
+#include "debug.h"
 
+/* __IO int isRx = 0; */
+
+extern struct context_s *pctx;
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
 extern DMA_HandleTypeDef hdma_usart1_rx;
 extern DMA_HandleTypeDef hdma_usart1_tx;
+extern UART_HandleTypeDef huart1;
 
 extern TIM_HandleTypeDef htim14;
 
@@ -154,6 +162,73 @@ void TIM14_IRQHandler(void)
   /* USER CODE BEGIN TIM14_IRQn 1 */
 
   /* USER CODE END TIM14_IRQn 1 */
+}
+
+extern uint8_t msg_rx_buffer[256];
+extern __IO int msg_exist;
+
+uint8_t uart_rx_buffer[256];
+uint8_t uart_rx_pos = 0;
+
+/**
+* @brief This function handles USART1 global interrupt / USART1 wake-up interrupt through EXTI line 25.
+*/
+void USART1_IRQHandler(void)
+{
+  /* USER CODE BEGIN USART1_IRQn 0 */
+
+  /* USER CODE END USART1_IRQn 0 */
+  /* HAL_UART_IRQHandler(&huart1); */
+  /* USER CODE BEGIN USART1_IRQn 1 */
+
+  __HAL_UART_CLEAR_OREFLAG(&huart1);
+  __HAL_UART_CLEAR_FEFLAG(&huart1);
+
+  if (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_RXNE))
+  {
+    uint32_t c = *(&huart1.Instance->RDR);
+    uart_rx_buffer[uart_rx_pos++] = (uint8_t)c;
+    /* cbuffer_push(pctx->uart.cbuffer, (uint8_t) c); */
+
+    if (uart_rx_pos >= sizeof(uart_rx_buffer)) {
+        uart_rx_pos = 0;
+        msg_exist = 0;
+        return;
+    }
+
+    uint8_t payload_len = uart_rx_buffer[3];
+    if (payload_len + 2 /* preamble */ + 2 + 3 == uart_rx_pos) {
+        if (uart_rx_buffer[0] == PREAMBLE_OCTET &&
+            uart_rx_buffer[1] == PREAMBLE_OCTET &&
+            uart_rx_buffer[uart_rx_pos - 1] == END_OCTET) {
+            
+            memcpy(msg_rx_buffer, &uart_rx_buffer[2], payload_len + 2);
+            uart_rx_pos = 0;
+            msg_exist = 1;
+        }
+        else {
+            /* error!! */
+            uart_rx_pos = 0;
+        }
+    }
+  }
+  else
+  {
+    __HAL_UART_CLEAR_OREFLAG(&huart1);
+    __HAL_UART_CLEAR_FEFLAG(&huart1);
+  }  
+  
+  __HAL_UART_ENABLE_IT(&huart1, UART_IT_RXNE);
+
+  /* if (isRx && !cbuffer_isfull(pctx->uart.cbuffer)) { */
+  /*     uart_t *puart = &pctx->uart; */
+  /*     uint8_t c = puart->handle->Instance->RDR; */
+  /*     cbuffer_push(puart->cbuffer, c); */
+
+  /*     /\* DBG_LOG("%s: 0x%02X\n", __func__, c); *\/ */
+  /* } */
+
+  /* USER CODE END USART1_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */

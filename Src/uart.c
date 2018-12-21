@@ -1,6 +1,8 @@
 #include "uart.h"
+#include "context.h"
 #include "debug.h"
 #include "main.h"
+#include "protocol.h"
 
 #include <string.h>
 
@@ -40,10 +42,6 @@ static const uint16_t crc_ccitt_lut[] =
     0xef1f, 0xff3e, 0xcf5d, 0xdf7c, 0xaf9b, 0xbfba, 0x8fd9, 0x9ff8, \
     0x6e17, 0x7e36, 0x4e55, 0x5e74, 0x2e93, 0x3eb2, 0x0ed1, 0x1ef0 \
 };
-
-// Special SLIP octet
-#define PREAMBLE_OCTET 0xFD
-#define END_OCTET      0xFE
 
 __IO ITStatus UartReady = RESET;
 __IO ITStatus UartTxCompleted = RESET;
@@ -117,44 +115,74 @@ int uart_init(uart_t *obj, UART_HandleTypeDef *handle, cbuffer_t *cbuf)
     return 0;
 }
 
-int uart_receive(uart_t *obj, uint8_t *data, uint16_t size, uint32_t timeout)
-{
-    HAL_StatusTypeDef status;
-    uint8_t rx_buffer[128] = { 0 };
+/* int uart_receive(uart_t *obj, uint8_t *data, uint16_t *size, uint32_t timeout) */
+/* { */
+/*     HAL_StatusTypeDef status; */
 
-    status = HAL_UART_Receive(obj->handle, rx_buffer, size, timeout);
-    if (status != HAL_OK) {
-        DBG_LOG("%s HAL_UART_Recevie error (%d)\n", __func__, status);
-        return -1;
-    }
+/*     /\* status = HAL_UART_Receive(obj->handle, rx_buffer, size, timeout); *\/ */
+/*     /\* if (status != HAL_OK) { *\/ */
+/*     /\*     DBG_LOG("%s HAL_UART_Recevie error (%d)\n", __func__, status); *\/ */
+/*     /\*     return -1; *\/ */
+/*     /\* } *\/ */
+/*     HAL_UART_Receive_IT(obj->handle, uart_rx_buffer, 1); */
 
-    DBG_LOG("%s: hexdump\r\n", __func__);
-    for (int i = 0; i < size; i++) {
-        DBG_LOG("0x%02X ", rx_buffer[i]);
-        if (i % 10 == 9)
-            DBG_LOG("\r\n");
-    }
-    DBG_LOG("\r\n");
+/*     /\* cbuffer_t *cbfr = obj->cbuffer; *\/ */
+/*     /\* uint8_t c; *\/ */
+/*     /\* if (cbuffer_len(cbfr) < 7) *\/ */
+/*     /\*     return -1; *\/ */
 
-    if (rx_buffer[0] == PREAMBLE_OCTET &&
-        rx_buffer[1] == PREAMBLE_OCTET)
-    {
-        uint8_t length = rx_buffer[3];
-        if (length < 128 && rx_buffer[4 + length + 2] == END_OCTET) {
-            memcpy(data, &rx_buffer[2], length + 2);
-            return length + 2;
-        }
-        /* int offset = 2; */
-        /* int ret; */
-        /* while (rx_buffer[offset] != END_OCTET) { */
-        /*     ret = cbuffer_push(obj->cbuffer, rx_buffer[offset]); */
-        /*     if (ret == -1) */
-        /*         break; */
-        /* } */
-    }
+/*     /\* /\\* while (!cbuffer_isempty(cbfr)) { *\\/ *\/ */
+/*     /\* /\\*     cbuffer_peek(cbfr, &c); *\\/ *\/ */
+      
+/*     /\* /\\*     if (c != PREAMBLE_OCTET) *\\/ *\/ */
+/*     /\* /\\*         cbuffer_pop(cbfr, &c); *\\/ *\/ */
+/*     /\* /\\*     else *\\/ *\/ */
+/*     /\* /\\*         break; *\\/ *\/ */
+/*     /\* /\\* } *\\/ *\/ */
 
-    return size;
-}
+/*     /\* static uint8_t buffer[256] = { 0 }; *\/ */
+/*     /\* static int count = 0; *\/ */
+/*     /\* while (!cbuffer_isempty(cbfr)) { *\/ */
+/*     /\*     cbuffer_pop(cbfr, &buffer[count++]); *\/ */
+/*     /\* } *\/ */
+
+/*     /\* DBG_LOG("%s: hexdump\r\n", __func__); *\/ */
+/*     /\* for (int i = 0; i < count; i++) { *\/ */
+/*     /\*     DBG_LOG("0x%02X ", buffer[i]); *\/ */
+/*     /\*     if (i % 10 == 9) *\/ */
+/*     /\*         DBG_LOG("\r\n"); *\/ */
+/*     /\* } *\/ */
+/*     /\* DBG_LOG("\r\n"); *\/ */
+
+/*     /\* /\\* validate the byte stream *\\/ *\/ */
+/*     /\* int offset = 0; *\/ */
+/*     /\* uint8_t length = buffer[3]; *\/ */
+/*     /\* if (buffer[4 + length + 2] != END_OCTET) { *\/ */
+/*     /\*     DBG_LOG("Gatcha!!!\n"); *\/ */
+/*     /\*     /\\* if (crc check error) *\\/ *\/ */
+/*     /\*     return -1; *\/ */
+/*     /\* } *\/ */
+
+/*     /\* memcpy(data, &buffer[2], length + 2); *\/ */
+/*     /\* if (rx_buffer[0] == PREAMBLE_OCTET && *\/ */
+/*     /\*     rx_buffer[1] == PREAMBLE_OCTET) *\/ */
+/*     /\* { *\/ */
+/*     /\*     uint8_t length = rx_buffer[3]; *\/ */
+/*     /\*     if (length < 128 && rx_buffer[4 + length + 2] == END_OCTET) { *\/ */
+/*     /\*         memcpy(data, &rx_buffer[2], length + 2); *\/ */
+/*     /\*         return length + 2; *\/ */
+/*     /\*     } *\/ */
+/*     /\*     /\\* int offset = 2; *\\/ *\/ */
+/*     /\*     /\\* int ret; *\\/ *\/ */
+/*     /\*     /\\* while (rx_buffer[offset] != END_OCTET) { *\\/ *\/ */
+/*     /\*     /\\*     ret = cbuffer_push(obj->cbuffer, rx_buffer[offset]); *\\/ *\/ */
+/*     /\*     /\\*     if (ret == -1) *\\/ *\/ */
+/*     /\*     /\\*         break; *\\/ *\/ */
+/*     /\*     /\\* } *\\/ *\/ */
+/*     /\* } *\/ */
+
+/*     return 0; */
+/* } */
 
 int uart_send(uart_t *obj, void *data, size_t size)
 {
@@ -196,12 +224,18 @@ int uart_send(uart_t *obj, void *data, size_t size)
   *         you can add your own implementation.
   * @retval None
   */
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *Handle)
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
     /* Set transmission flag: trasfer complete*/
-    if (Handle->RxState == HAL_UART_STATE_READY) {
-        DBG_LOG("%s\n", __func__);
-    }
+    /* if (huart->Instance == USART1) { */
+    /*     uint8_t *ptr = &uart_rx_buffer[0]; */
+    /*     while (ptr != huart->pRxBuffPtr) { */
+    /*         cbuffer_push(pctx->uart.cbuffer, *ptr); */
+    /*         ptr++; */
+    /*     } */
+    /*     __HAL_UART_SEND_REQ(huart, UART_RXDATA_FLUSH_REQUEST); */
+    /*     /\* __HAL_UART_ENABLE_IT(huart, UART_IT_RXNE); *\/ */
+    /* } */
     UartReady = SET;
 }
 

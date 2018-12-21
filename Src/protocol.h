@@ -2,6 +2,9 @@
 
 #include <stdint.h>
 
+#define PREAMBLE_OCTET 0xFD
+#define END_OCTET      0xFE
+
 typedef struct __packed {
     uint8_t id;
     uint8_t status;
@@ -9,11 +12,15 @@ typedef struct __packed {
 } tof_result_t;
 
 typedef struct __packed {
-    
-} tof_config_t;
+    uint8_t top_left_x;
+    uint8_t top_left_y;
+    uint8_t bot_right_x;
+    uint8_t bot_right_y;
+} roi_config_t;
 
 #define FRAME_TYPE_STOP       0
 #define FRAME_TYPE_START      1
+#define FRAME_TYPE_ROI_CONFIG 2
 #define FRAME_TYPE_TOF_RESULT 3
 
 typedef struct __packed {
@@ -21,7 +28,7 @@ typedef struct __packed {
     uint8_t length;
     union {
         tof_result_t        tof_result_payload[12];
-        tof_config_t        tof_config_payload;
+        roi_config_t        roi_config[12];
     } payload;
 } protocol_frame_t;
 

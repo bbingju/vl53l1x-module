@@ -1315,7 +1315,7 @@ public:
     bool timeoutOccurred();
     void resetKlass();
 
-    int setUserRoi(uint8_t TopLeftX, uint8_t TopLeftY, uint8_t BotRightX, uint8_t BotRightY);
+    int setUserRoi();
     int getUserRoi();
 
 private:

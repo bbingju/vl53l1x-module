@@ -43,9 +43,8 @@
 /* USER CODE BEGIN Includes */
 //#define USE_OFFICIAL_API
 
+#include "context.h"
 #include "debug.h"
-#include "state.h"
-#include "uart.h"
 #ifdef USE_OFFICIAL_API
 #include "vl53l1_api.h"
 #else
@@ -91,23 +90,23 @@ uint16_t XSHUTx[12] = { XSHUT1_Pin, XSHUT2_Pin, XSHUT3_Pin, XSHUT4_Pin,
     XSHUT9_Pin, XSHUT10_Pin, XSHUT11_Pin, XSHUT12_Pin, };
 
 
-static state_t state_obj = {
-    .curr_state = STATE_NONE,
-};
+// static state_t state_obj = {
+//     .curr_state = STATE_NONE,
+// };
 
-uart_t uart_obj;
+// uart_t uart_obj;
 CBUFFER_DEF_STATIC(uart_rxbuf, RX_BUFFER_SIZE);
 
 protocol_frame_t tx_frame;
 
-struct context_s {
+struct context_s ctx;
+struct context_s *pctx;
 
-    uint32_t measure_interval;
-    uint8_t distance_mode;      // 0: short, 1: medium, 2: long, 3: unknown
+uint8_t msg_rx_buffer[256] = { 0 };
+__IO int msg_exist = 0;
 
-};
+extern uint8_t uart_rx_buffer[];
 
-struct context_s c;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -132,42 +131,79 @@ static int handle_req()
 
 static void context_init()
 {
-    c.distance_mode = 3;
-    c.measure_interval = 100;   // ms
+    ctx.distance_mode = 3;
+    ctx.measure_interval = 100;   // ms
 
 }
 
 static void idle_callback(state_t *obj)
 {
-    uint8_t req[32] = { 0 };
+    // uint8_t req[128] = { 0 };
+    // uint16_t size;
     // DBG_LOG("read req from UART\r\n");
 
-    int ret = uart_receive(&uart_obj, req, 7, 0xffff);
-    if (ret == -1) {
-        // DBG_LOG("%s error\r\n", __func__);
-        return;
-    }
+    HAL_UART_Receive_IT(&huart1, uart_rx_buffer, 1);
+    // int ret = uart_receive(&ctx.uart, req, &size, 0xffff);
+    // if (ret == -1) {
+    //     // DBG_LOG("%s error\r\n", __func__);
+    //     return;
+    // }
 
-    uint8_t type = req[0];
-    uint8_t length = req[1];
-    if (ret > 2) {
-        // data exist, do something
-    }
+    // uint8_t type = req[0];
+    // uint8_t length = req[1];
+    // if (ret > 2) {
+    //     // data exist, do something
+    // }
     // DBG_LOG("%s: type (0x%02x), length (0x%02x)\n", __func__, type, length);
 
-    if (type == FRAME_TYPE_START) {
-        DBG_LOG("%s: transit to start_state\n", __func__);
+    if (msg_exist) {
+        uint8_t type = msg_rx_buffer[0];
+        uint8_t length = msg_rx_buffer[1];
 
-        /* Test */
-        // tx_frame.type = FRAME_TYPE_STOP;
-        // tx_frame.length = 0;
-        // uart_send(&uart_obj, &tx_frame, FRAME_SIZE(&tx_frame));
+        DBG_LOG("%s: hexdump\r\n", __func__);
+        for (int i = 2; i < length; i++) {
+            DBG_LOG("0x%02X ", msg_rx_buffer[i]);
+            if (i % 10 == 9)
+                DBG_LOG("\r\n");
+        }
+        DBG_LOG("\r\n");
 
-        // tx_frame.type = FRAME_TYPE_START;
-        // tx_frame.length = 0;
-        // uart_send(&uart_obj, &tx_frame, FRAME_SIZE(&tx_frame));
+        if (type == FRAME_TYPE_START) {
+            DBG_LOG("%s: transit to start_state\n", __func__);
 
-        state_transit(obj, EVENT_START);
+            pctx->distance_mode = msg_rx_buffer[2];
+            pctx->measure_interval = (uint16_t) msg_rx_buffer[3];;
+
+            /* Test */
+            // tx_frame.type = FRAME_TYPE_STOP;
+            // tx_frame.length = 0;
+            // uart_send(&uart_obj, &tx_frame, FRAME_SIZE(&tx_frame));
+
+            // tx_frame.type = FRAME_TYPE_START;
+            // tx_frame.length = 0;
+            // uart_send(&uart_obj, &tx_frame, FRAME_SIZE(&tx_frame));
+
+            state_transit(obj, EVENT_START);
+        }
+        else if (type == FRAME_TYPE_ROI_CONFIG) {
+            roi_config_t *config = (roi_config_t *)&msg_rx_buffer[2];
+            for (int i = 0; i < 12; i++) {
+                sensor[i].roi.TopLeftX = (config + i)->top_left_x;
+                sensor[i].roi.TopLeftY = (config + i)->top_left_y;
+                sensor[i].roi.BotRightX = (config + i)->bot_right_x;
+                sensor[i].roi.BotRightY = (config + i)->bot_right_y;
+
+                DBG_LOG("roi_config [%]: 0x%02x 0x%02x 0x%02x 0x%02x\n",
+                        sensor[i].roi.TopLeftX,
+                        sensor[i].roi.TopLeftY,
+                        sensor[i].roi.BotRightX,
+                        sensor[i].roi.BotRightY
+                       );
+            }
+        }
+
+        memset(msg_rx_buffer, 0, sizeof(msg_rx_buffer));
+        msg_exist = 0;
     }
 }
 
@@ -219,32 +255,33 @@ static void start_callback(state_t *obj)
 
         sensor[i].setTimeout(1200);
 
-        if (c.distance_mode == 0)
+        if (ctx.distance_mode == 0)
             sensor[i].setDistanceMode(VL53L1X::Short);
-        else if (c.distance_mode == 1)
+        else if (ctx.distance_mode == 1)
             sensor[i].setDistanceMode(VL53L1X::Medium);
-        else if (c.distance_mode == 2)
+        else if (ctx.distance_mode == 2)
             sensor[i].setDistanceMode(VL53L1X::Long);
 
         sensor[i].setMeasurementTimingBudget(50000);
 
-        // ROI config
+        // ROI config test;
         sensor[i].getUserRoi();
-        DBG_LOG("[%d] before ROI setting: x1 (%d), y1 (%d), x2(%d), y2(%d)\n", i,
-                sensor[i].roi.TopLeftX, sensor[i].roi.TopLeftY,
-                sensor[i].roi.BotRightX, sensor[i].roi.BotRightY);
+        // DBG_LOG("[%d] before ROI setting: x1 (%d), y1 (%d), x2(%d), y2(%d)\n", i,
+        //         sensor[i].roi.TopLeftX, sensor[i].roi.TopLeftY,
+        //         sensor[i].roi.BotRightX, sensor[i].roi.BotRightY);
 
-        uint8_t x1, y1, x2, y2;
-        x1 = 4;
-        y1 = 7;
-        x2 = 7;
-        y2 = 4;
-        sensor[i].setUserRoi(x1, y1, x2, y2);
+        // uint8_t x1, y1, x2, y2;
+        // x1 = 4;
+        // y1 = 7;
+        // x2 = 7;
+        // y2 = 4;
+        // sensor[i].setUserRoi(x1, y1, x2, y2);
+        sensor[i].setUserRoi();
 
         sensor[i].getUserRoi();
-        DBG_LOG("[%d] after ROI setting: x1 (%d), y1 (%d), x2(%d), y2(%d)\n", i,
-                sensor[i].roi.TopLeftX, sensor[i].roi.TopLeftY,
-                sensor[i].roi.BotRightX, sensor[i].roi.BotRightY);
+        // DBG_LOG("[%d] after ROI setting: x1 (%d), y1 (%d), x2(%d), y2(%d)\n", i,
+        //         sensor[i].roi.TopLeftX, sensor[i].roi.TopLeftY,
+        //         sensor[i].roi.BotRightX, sensor[i].roi.BotRightY);
     }
 
     for (int i = SENSOR_START_IDX; i < SENSOR_START_IDX + SENSOR_NBR; i++) {
@@ -316,18 +353,6 @@ static void start_callback(state_t *obj)
 
 static void measuring_callback(state_t *obj)
 {
-    // char req[32] = { 0 };
-
-    // if (uart_receive(&uart_obj, (uint8_t *) req, 32, 300) == -1) {
-    //     goto start_measuring;
-    // }
-    // else {
-    //     if (req[0] == FRAME_TYPE_STOP) {
-    //         state_transit(obj, EVENT_STOP);
-    //     }
-    //     return;
-    // }
-
     uint32_t measure_start_tick, measure_elapsed_tick;
     measure_start_tick = HAL_GetTick();
 #ifndef USE_OFFICIAL_API
@@ -346,7 +371,7 @@ static void measuring_callback(state_t *obj)
     }
     tx_frame.type = FRAME_TYPE_TOF_RESULT;
     tx_frame.length = sizeof(tx_frame.payload.tof_result_payload);
-    uart_send(&uart_obj, &tx_frame, FRAME_SIZE(&tx_frame));
+    uart_send(&ctx.uart, &tx_frame, FRAME_SIZE(&tx_frame));
 #else
   start_measuring:
     VL53L1_Error status;
@@ -375,19 +400,20 @@ static void measuring_callback(state_t *obj)
 
     DBG_LOG("measure: elapsed time %d\n", measure_elapsed_tick);
 
-    if (c.measure_interval > measure_elapsed_tick)
-        HAL_Delay(c.measure_interval - measure_elapsed_tick);
+    if (ctx.measure_interval > measure_elapsed_tick)
+        HAL_Delay(ctx.measure_interval - measure_elapsed_tick);
 
-    // char req[32] = { 0 };
-
-    // if (uart_receive(&uart_obj, (uint8_t *) req, 32, 300) == -1) {
-    //     return;
-    // }
-    // else {
-    //     if (req[0] == FRAME_TYPE_STOP) {
-    //         state_transit(obj, EVENT_STOP);
-    //     }
-    // }
+    HAL_UART_Receive_IT(&huart1, uart_rx_buffer, 1);
+    if (msg_exist) {
+        uint8_t type = msg_rx_buffer[0];
+        uint8_t length = msg_rx_buffer[1];
+        if (type == FRAME_TYPE_STOP) {
+            DBG_LOG("%s: transit to stop_state\n", __func__);
+            state_transit(obj, EVENT_STOP);
+        }
+        memset(msg_rx_buffer, 0, sizeof(msg_rx_buffer));
+        msg_exist = 0;
+    }
 }
 
 static void config_callback(state_t *obj)
@@ -405,7 +431,7 @@ static void config_callback(state_t *obj)
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
+    pctx = &ctx;
   /* USER CODE END 1 */
 
   /* MCU Configuration----------------------------------------------------------*/
@@ -431,9 +457,9 @@ int main(void)
   MX_USART1_UART_Init();
 
   /* USER CODE BEGIN 2 */
-  uart_init(&uart_obj, &huart1, &uart_rxbuf);
-  state_init(&state_obj, NULL);
-  struct state_ops_s *op = &state_obj.ops;
+  uart_init(&pctx->uart, &huart1, &uart_rxbuf);
+  state_init(&pctx->state, NULL);
+  struct state_ops_s *op = &ctx.state.ops;
   op->idle_func     = idle_callback;
   op->stop_func     = stop_callback;
   op->start_func    = start_callback;
@@ -451,7 +477,7 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-      state_loop(&state_obj);
+      state_loop(&ctx.state);
   }
   /* USER CODE END 3 */
 

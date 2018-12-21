@@ -55,3 +55,23 @@ int cbuffer_peek(cbuffer_t *self, uint8_t *data)
     return 0;
 }
 
+/* int cbuffer_peek_ex(cbuffer_t * self, uint8_t *data, int index) */
+/* { */
+/*     if (cbuffer_len(self) <= index) { */
+/*         return -1; */
+/*     } */
+
+/*     if (self->head > self->tail) { */
+/*         if (self->head - index >= 0) */
+/*             *data = self->buffer[self->head - index]; */
+/*         /\* else *\/ */
+/*         /\*     *data = self *\/ */
+/*     } */
+/*     return 0; */
+/* } */
+
+int cbuffer_len(cbuffer_t *self)
+{
+    return (self->head >= self->tail) ? self->head - self->tail : self->tail - (self->tail - self->head);
+}
+

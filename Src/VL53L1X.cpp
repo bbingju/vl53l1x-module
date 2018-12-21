@@ -1042,29 +1042,24 @@ void VL53L1X::resetKlass()
     distance_mode = Unknown;
 }
 
-int VL53L1X::setUserRoi(uint8_t TopLeftX, uint8_t TopLeftY, uint8_t BotRightX, uint8_t BotRightY)
+int VL53L1X::setUserRoi()
 {
     uint8_t x_centre, y_centre, width, height;
 
     /* Negative check are not necessary because value is unsigned */
-    if ((TopLeftX > 15) || (TopLeftY > 15) ||
-        (BotRightX > 15) || (BotRightY > 15))
+    if ((roi.TopLeftX > 15) || (roi.TopLeftY > 15) ||
+        (roi.BotRightX > 15) || (roi.BotRightY > 15))
         return -4;              // VL53L1_ERROR_INVALID_PARAMS
 
-    if ((TopLeftX > BotRightX) || (TopLeftY < BotRightY))
+    if ((roi.TopLeftX > roi.BotRightX) || (roi.TopLeftY < roi.BotRightY))
         return -4;              // invalid params
 
-    x_centre = (BotRightX + TopLeftX  + 1) / 2;
-    y_centre = (TopLeftY  + BotRightY + 1) / 2;
-    width    = (BotRightX - TopLeftX);
-    height   = (TopLeftY  - BotRightY);
+    x_centre = (roi.BotRightX + roi.TopLeftX  + 1) / 2;
+    y_centre = (roi.TopLeftY  + roi.BotRightY + 1) / 2;
+    width    = (roi.BotRightX - roi.TopLeftX);
+    height   = (roi.TopLeftY  - roi.BotRightY);
     if ((width < 3) || (height < 3))
         return -4;              // invalid params
-
-    roi.TopLeftX  = TopLeftX;
-    roi.TopLeftY  = TopLeftY;
-    roi.BotRightX = BotRightX;
-    roi.BotRightY = BotRightY;
 
     /**
      *  Encodes the input array(row,col) location as SPAD number.
