@@ -12,7 +12,6 @@ UART_C_INCLUDES =
 UART_C_SOURCES = \
 Src/state.c \
 Src/uart.c \
-Src/cbuffer.c
 
 # VL53L1X driver sources
 VL53L1X_C_INCLUDES = \

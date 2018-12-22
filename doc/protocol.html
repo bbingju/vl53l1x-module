@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<!-- 2018-12-20 목 16:33 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Protocol Spec for VL53L1X Module</title>
+<meta name="generator" content="Org mode">
+<meta name="author" content="Byung-Ju Hwang">
+<style type="text/css">
+ <!--/*--><![CDATA[/*><!--*/
+  .title  { text-align: center;
+             margin-bottom: .2em; }
+  .subtitle { text-align: center;
+              font-size: medium;
+              font-weight: bold;
+              margin-top:0; }
+  .todo   { font-family: monospace; color: red; }
+  .done   { font-family: monospace; color: green; }
+  .priority { font-family: monospace; color: orange; }
+  .tag    { background-color: #eee; font-family: monospace;
+            padding: 2px; font-size: 80%; font-weight: normal; }
+  .timestamp { color: #bebebe; }
+  .timestamp-kwd { color: #5f9ea0; }
+  .org-right  { margin-left: auto; margin-right: 0px;  text-align: right; }
+  .org-left   { margin-left: 0px;  margin-right: auto; text-align: left; }
+  .org-center { margin-left: auto; margin-right: auto; text-align: center; }
+  .underline { text-decoration: underline; }
+  #postamble p, #preamble p { font-size: 90%; margin: .2em; }
+  p.verse { margin-left: 3%; }
+  pre {
+    border: 1px solid #ccc;
+    box-shadow: 3px 3px 3px #eee;
+    padding: 8pt;
+    font-family: monospace;
+    overflow: auto;
+    margin: 1.2em;
+  }
+  pre.src {
+    position: relative;
+    overflow: visible;
+    padding-top: 1.2em;
+  }
+  pre.src:before {
+    display: none;
+    position: absolute;
+    background-color: white;
+    top: -10px;
+    right: 10px;
+    padding: 3px;
+    border: 1px solid black;
+  }
+  pre.src:hover:before { display: inline;}
+  /* Languages per Org manual */
+  pre.src-asymptote:before { content: 'Asymptote'; }
+  pre.src-awk:before { content: 'Awk'; }
+  pre.src-C:before { content: 'C'; }
+  /* pre.src-C++ doesn't work in CSS */
+  pre.src-clojure:before { content: 'Clojure'; }
+  pre.src-css:before { content: 'CSS'; }
+  pre.src-D:before { content: 'D'; }
+  pre.src-ditaa:before { content: 'ditaa'; }
+  pre.src-dot:before { content: 'Graphviz'; }
+  pre.src-calc:before { content: 'Emacs Calc'; }
+  pre.src-emacs-lisp:before { content: 'Emacs Lisp'; }
+  pre.src-fortran:before { content: 'Fortran'; }
+  pre.src-gnuplot:before { content: 'gnuplot'; }
+  pre.src-haskell:before { content: 'Haskell'; }
+  pre.src-hledger:before { content: 'hledger'; }
+  pre.src-java:before { content: 'Java'; }
+  pre.src-js:before { content: 'Javascript'; }
+  pre.src-latex:before { content: 'LaTeX'; }
+  pre.src-ledger:before { content: 'Ledger'; }
+  pre.src-lisp:before { content: 'Lisp'; }
+  pre.src-lilypond:before { content: 'Lilypond'; }
+  pre.src-lua:before { content: 'Lua'; }
+  pre.src-matlab:before { content: 'MATLAB'; }
+  pre.src-mscgen:before { content: 'Mscgen'; }
+  pre.src-ocaml:before { content: 'Objective Caml'; }
+  pre.src-octave:before { content: 'Octave'; }
+  pre.src-org:before { content: 'Org mode'; }
+  pre.src-oz:before { content: 'OZ'; }
+  pre.src-plantuml:before { content: 'Plantuml'; }
+  pre.src-processing:before { content: 'Processing.js'; }
+  pre.src-python:before { content: 'Python'; }
+  pre.src-R:before { content: 'R'; }
+  pre.src-ruby:before { content: 'Ruby'; }
+  pre.src-sass:before { content: 'Sass'; }
+  pre.src-scheme:before { content: 'Scheme'; }
+  pre.src-screen:before { content: 'Gnu Screen'; }
+  pre.src-sed:before { content: 'Sed'; }
+  pre.src-sh:before { content: 'shell'; }
+  pre.src-sql:before { content: 'SQL'; }
+  pre.src-sqlite:before { content: 'SQLite'; }
+  /* additional languages in org.el's org-babel-load-languages alist */
+  pre.src-forth:before { content: 'Forth'; }
+  pre.src-io:before { content: 'IO'; }
+  pre.src-J:before { content: 'J'; }
+  pre.src-makefile:before { content: 'Makefile'; }
+  pre.src-maxima:before { content: 'Maxima'; }
+  pre.src-perl:before { content: 'Perl'; }
+  pre.src-picolisp:before { content: 'Pico Lisp'; }
+  pre.src-scala:before { content: 'Scala'; }
+  pre.src-shell:before { content: 'Shell Script'; }
+  pre.src-ebnf2ps:before { content: 'ebfn2ps'; }
+  /* additional language identifiers per "defun org-babel-execute"
+       in ob-*.el */
+  pre.src-cpp:before  { content: 'C++'; }
+  pre.src-abc:before  { content: 'ABC'; }
+  pre.src-coq:before  { content: 'Coq'; }
+  pre.src-groovy:before  { content: 'Groovy'; }
+  /* additional language identifiers from org-babel-shell-names in
+     ob-shell.el: ob-shell is the only babel language using a lambda to put
+     the execution function name together. */
+  pre.src-bash:before  { content: 'bash'; }
+  pre.src-csh:before  { content: 'csh'; }
+  pre.src-ash:before  { content: 'ash'; }
+  pre.src-dash:before  { content: 'dash'; }
+  pre.src-ksh:before  { content: 'ksh'; }
+  pre.src-mksh:before  { content: 'mksh'; }
+  pre.src-posh:before  { content: 'posh'; }
+  /* Additional Emacs modes also supported by the LaTeX listings package */
+  pre.src-ada:before { content: 'Ada'; }
+  pre.src-asm:before { content: 'Assembler'; }
+  pre.src-caml:before { content: 'Caml'; }
+  pre.src-delphi:before { content: 'Delphi'; }
+  pre.src-html:before { content: 'HTML'; }
+  pre.src-idl:before { content: 'IDL'; }
+  pre.src-mercury:before { content: 'Mercury'; }
+  pre.src-metapost:before { content: 'MetaPost'; }
+  pre.src-modula-2:before { content: 'Modula-2'; }
+  pre.src-pascal:before { content: 'Pascal'; }
+  pre.src-ps:before { content: 'PostScript'; }
+  pre.src-prolog:before { content: 'Prolog'; }
+  pre.src-simula:before { content: 'Simula'; }
+  pre.src-tcl:before { content: 'tcl'; }
+  pre.src-tex:before { content: 'TeX'; }
+  pre.src-plain-tex:before { content: 'Plain TeX'; }
+  pre.src-verilog:before { content: 'Verilog'; }
+  pre.src-vhdl:before { content: 'VHDL'; }
+  pre.src-xml:before { content: 'XML'; }
+  pre.src-nxml:before { content: 'XML'; }
+  /* add a generic configuration mode; LaTeX export needs an additional
+     (add-to-list 'org-latex-listings-langs '(conf " ")) in .emacs */
+  pre.src-conf:before { content: 'Configuration File'; }
+
+  table { border-collapse:collapse; }
+  caption.t-above { caption-side: top; }
+  caption.t-bottom { caption-side: bottom; }
+  td, th { vertical-align:top;  }
+  th.org-right  { text-align: center;  }
+  th.org-left   { text-align: center;   }
+  th.org-center { text-align: center; }
+  td.org-right  { text-align: right;  }
+  td.org-left   { text-align: left;   }
+  td.org-center { text-align: center; }
+  dt { font-weight: bold; }
+  .footpara { display: inline; }
+  .footdef  { margin-bottom: 1em; }
+  .figure { padding: 1em; }
+  .figure p { text-align: center; }
+  .inlinetask {
+    padding: 10px;
+    border: 2px solid gray;
+    margin: 10px;
+    background: #ffffcc;
+  }
+  #org-div-home-and-up
+   { text-align: right; font-size: 70%; white-space: nowrap; }
+  textarea { overflow-x: auto; }
+  .linenr { font-size: smaller }
+  .code-highlighted { background-color: #ffff00; }
+  .org-info-js_info-navigation { border-style: none; }
+  #org-info-js_console-label
+    { font-size: 10px; font-weight: bold; white-space: nowrap; }
+  .org-info-js_search-highlight
+    { background-color: #ffff00; color: #000000; font-weight: bold; }
+  .org-svg { width: 90%; }
+  /*]]>*/-->
+</style>
+<link href="http://fonts.googleapis.com/css?family=Roboto+Slab:400,700|Inconsolata:400,700" rel="stylesheet" type="text/css" />
+<link rel="stylesheet" type="text/css" href="http://www.pirilampo.org/styles/readtheorg/css/htmlize.css"/>
+<link rel="stylesheet" type="text/css" href="http://www.pirilampo.org/styles/readtheorg/css/readtheorg.css"/>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="http://www.pirilampo.org/styles/lib/js/jquery.stickytableheaders.js"></script>
+<script type="text/javascript" src="http://www.pirilampo.org/styles/readtheorg/js/readtheorg.js"></script>
+<script type="text/javascript">
+/*
+@licstart  The following is the entire license notice for the
+JavaScript code in this tag.
+
+Copyright (C) 2012-2018 Free Software Foundation, Inc.
+
+The JavaScript code in this tag is free software: you can
+redistribute it and/or modify it under the terms of the GNU
+General Public License (GNU GPL) as published by the Free Software
+Foundation, either version 3 of the License, or (at your option)
+any later version.  The code is distributed WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.  See the GNU GPL for more details.
+
+As additional permission under GNU GPL version 3 section 7, you
+may distribute non-source (e.g., minimized or compacted) forms of
+that code without the copy of the GNU GPL normally required by
+section 4, provided you include this license notice and a URL
+through which recipients can access the Corresponding Source.
+
+
+@licend  The above is the entire license notice
+for the JavaScript code in this tag.
+*/
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+</head>
+<body>
+<div id="content">
+<h1 class="title">Protocol Spec for VL53L1X Module</h1>
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#org1123a0c">1. ToF Message</a>
+<ul>
+<li><a href="#orgfc72487">1.1. Payload</a></li>
+<li><a href="#org5c13e8a">1.2. Type 종류</a>
+<ul>
+<li><a href="#orgd57bb5b">1.2.1. TOF_TYPE_STOP</a></li>
+<li><a href="#orgee1c8e6">1.2.2. TOF_TYPE_START</a></li>
+<li><a href="#org2fd979c">1.2.3. TOF_TYPE_ROI_CONFIG</a></li>
+<li><a href="#orgd4205c4">1.2.4. TOF_TYPE_MEASURE_RESULT</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-org1123a0c" class="outline-2">
+<h2 id="org1123a0c"><span class="section-number-2">1</span> ToF Message</h2>
+<div class="outline-text-2" id="text-1">
+<p>
+시리얼 패킷은 아래와 같이 랩핑되어 있음.
+</p>
+
+<pre class="example">
+&lt;0xFD&gt;&lt;0xFD&gt; | n bytes | 2 bytes | &lt;0xFE&gt;
+Preable        payload    CRC       End
+</pre>
+
+<ul class="org-ul">
+<li><b>preamble</b> 2 byte <code>0xFDFD</code></li>
+<li><b>type</b>     1 byte</li>
+<li><b>length</b>   1 byte</li>
+<li><b>data</b>     n byte</li>
+<li><b>crc</b>      2 byte</li>
+<li><b>end</b>      1 byte <code>0xFE</code>
+
+<ul class="org-ul">
+<li>length는 payload의 크기만 의미한다.</li>
+<li>주의: 현재 CRC check는 사용하지 않는다.</li>
+</ul></li>
+</ul>
+</div>
+
+<div id="outline-container-orgfc72487" class="outline-3">
+<h3 id="orgfc72487"><span class="section-number-3">1.1</span> Payload</h3>
+<div class="outline-text-3" id="text-1-1">
+<ul class="org-ul">
+<li>Order는 Little Endian.</li>
+</ul>
+
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #65737E;">// </span><span style="color: #65737E;">Header of message format</span>
+<span style="color: #b48ead;">typedef</span> <span style="color: #b48ead;">struct</span> <span style="color: #b48ead;">__attribute__</span> <span style="color: #8FA1B3;">(</span><span style="color: #c678dd;">(</span>packed<span style="color: #c678dd;">)</span><span style="color: #8FA1B3;">)</span> <span style="color: #8FA1B3;">{</span>
+    <span style="color: #ECBE7B;">uint8_t</span> <span style="color: #dcaeea;">type</span>;    <span style="color: #65737E;">// </span><span style="color: #65737E;">Request type</span>
+    <span style="color: #ECBE7B;">uint8_t</span> <span style="color: #dcaeea;">length</span>;  <span style="color: #65737E;">// </span><span style="color: #65737E;">Number of bytes in data</span>
+    <span style="color: #ECBE7B;">uint8_t</span> <span style="color: #dcaeea;">data</span><span style="color: #c678dd;">[]</span>; <span style="color: #65737E;">// </span><span style="color: #65737E;">data, dependent on the type</span>
+<span style="color: #8FA1B3;">}</span> <span style="color: #ECBE7B;">tof_msg_t</span>;
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org5c13e8a" class="outline-3">
+<h3 id="org5c13e8a"><span class="section-number-3">1.2</span> Type 종류</h3>
+<div class="outline-text-3" id="text-1-2">
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #c0c5ce; font-weight: bold;">#define</span> <span style="color: #dcaeea;">TOF_TYPE_STOP</span>           0x00
+<span style="color: #c0c5ce; font-weight: bold;">#define</span> <span style="color: #dcaeea;">TOF_TYPE_START</span>          0x01
+<span style="color: #c0c5ce; font-weight: bold;">#define</span> <span style="color: #dcaeea;">TOF_TYPE_CONFIG_ROI</span>     0x02
+<span style="color: #c0c5ce; font-weight: bold;">#define</span> <span style="color: #dcaeea;">TOF_TYPE_MEASURE_RESULT</span> 0x03
+</pre>
+</div>
+</div>
+
+<div id="outline-container-orgd57bb5b" class="outline-4">
+<h4 id="orgd57bb5b"><span class="section-number-4">1.2.1</span> TOF_TYPE_STOP</h4>
+<div class="outline-text-4" id="text-1-2-1">
+<ul class="org-ul">
+<li>type   (0x00)</li>
+<li>length (0x00)</li>
+</ul>
+
+<pre class="example">
+fd fd 00 00 0f 1d fe
+</pre>
+</div>
+</div>
+
+<div id="outline-container-orgee1c8e6" class="outline-4">
+<h4 id="orgee1c8e6"><span class="section-number-4">1.2.2</span> TOF_TYPE_START</h4>
+<div class="outline-text-4" id="text-1-2-2">
+<ul class="org-ul">
+<li>type     (0x01)</li>
+<li>length   (0x03)</li>
+<li>distance (1 byte { 0x00: short, 0x01: medium, 0x02: long })</li>
+<li>interval (2 bytes { ms 단위값, 최소 100 ms 이상 설정을 권장함 })</li>
+
+<li>아래 예는 long distance, 100 ms 로 센서를 시작하라는 뜻.</li>
+</ul>
+
+<pre class="example">
+fd fd 01 03 02 64 00 3e 2e fe
+</pre>
+</div>
+</div>
+
+<div id="outline-container-org2fd979c" class="outline-4">
+<h4 id="org2fd979c"><span class="section-number-4">1.2.3</span> TOF_TYPE_ROI_CONFIG</h4>
+<div class="outline-text-4" id="text-1-2-3">
+<ul class="org-ul">
+<li>type     (0x02)</li>
+<li>length   (0x30)</li>
+<li><p>
+data는 아래 구조체(4 byte)가 12개 붙어있음.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #b48ead;">struct</span> <span style="color: #ECBE7B;">roi_config</span> <span style="color: #b48ead;">__attribute__</span><span style="color: #8FA1B3;">(</span><span style="color: #c678dd;">(</span>packed<span style="color: #c678dd;">)</span><span style="color: #8FA1B3;">)</span> <span style="color: #8FA1B3;">{</span>
+    <span style="color: #ECBE7B;">uint8_t</span> <span style="color: #dcaeea;">TopLeftX</span>;
+    <span style="color: #ECBE7B;">uint8_t</span> <span style="color: #dcaeea;">TopLeftY</span>;
+    <span style="color: #ECBE7B;">uint8_t</span> <span style="color: #dcaeea;">BotRightX</span>;
+    <span style="color: #ECBE7B;">uint8_t</span> <span style="color: #dcaeea;">BotRightY</span>;
+<span style="color: #8FA1B3;">}</span>;
+</pre>
+</div></li>
+
+<li>ROI 설정은 센서가 Stop인 경우에만 가능함.</li>
+
+<li><p>
+예)
+</p>
+<pre class="example">
+fd fd 02 30 04 07 07 04 00 0f 0f 00 00 0f 0f 00 00 0f 0f 00
+00 0f 0f 00 00 0f 0f 00 00 0f 0f 00 00 0f 0f 00 00 0f 0f 00
+00 0f 0f 00 00 0f 0f 00 00 0f 0f 00 12 34 fe
+</pre></li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-orgd4205c4" class="outline-4">
+<h4 id="orgd4205c4"><span class="section-number-4">1.2.4</span> TOF_TYPE_MEASURE_RESULT</h4>
+<div class="outline-text-4" id="text-1-2-4">
+<ul class="org-ul">
+<li>type     (0x04)</li>
+<li>length   (0x30)</li>
+<li><p>
+data는 아래 구조체(4 byte)가 12개 붙어있음.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #b48ead;">typedef</span> <span style="color: #b48ead;">struct</span> <span style="color: #ECBE7B;">__packed</span> <span style="color: #8FA1B3;">{</span>
+    <span style="color: #ECBE7B;">uint8_t</span> <span style="color: #dcaeea;">id</span>;
+    <span style="color: #ECBE7B;">uint8_t</span> <span style="color: #dcaeea;">status</span>;
+    <span style="color: #ECBE7B;">uint16_t</span> <span style="color: #dcaeea;">range_mm</span>;
+<span style="color: #8FA1B3;">}</span> <span style="color: #ECBE7B;">measure_result_t</span>;
+</pre>
+</div></li>
+
+<li><p>
+멤버 중 <code>status</code> 는 다음과 같은 센서 상태를 의미함.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-c"><span style="color: #b48ead;">enum</span> <span style="color: #ECBE7B;">RangeStatus</span>
+<span style="color: #8FA1B3;">{</span>
+    <span style="color: #dcaeea;">RangeValid</span>                =   0,
+
+    <span style="color: #65737E;">// </span><span style="color: #65737E;">"sigma estimator check is above the internal defined threshold"</span>
+    <span style="color: #65737E;">// </span><span style="color: #65737E;">(sigma = standard deviation of measurement)</span>
+    <span style="color: #dcaeea;">SigmaFail</span>                 =   1,
+
+    <span style="color: #65737E;">// </span><span style="color: #65737E;">"signal value is below the internal defined threshold"</span>
+    <span style="color: #dcaeea;">SignalFail</span>                =   2,
+
+    <span style="color: #65737E;">// </span><span style="color: #65737E;">"Target is below minimum detection threshold."</span>
+    <span style="color: #dcaeea;">RangeValidMinRangeClipped</span> =   3,
+
+    <span style="color: #65737E;">// </span><span style="color: #65737E;">"phase is out of bounds"</span>
+    <span style="color: #65737E;">// </span><span style="color: #65737E;">(nothing detected in range; try a longer distance mode if applicable)</span>
+    <span style="color: #dcaeea;">OutOfBoundsFail</span>           =   4,
+
+    <span style="color: #65737E;">// </span><span style="color: #65737E;">"HW or VCSEL failure"</span>
+    <span style="color: #dcaeea;">HardwareFail</span>              =   5,
+
+    <span style="color: #65737E;">// </span><span style="color: #65737E;">"The Range is valid but the wraparound check has not been done."</span>
+    <span style="color: #dcaeea;">RangeValidNoWrapCheckFail</span> =   6,
+
+    <span style="color: #65737E;">// </span><span style="color: #65737E;">"Wrapped target, not matching phases"</span>
+    <span style="color: #65737E;">// </span><span style="color: #65737E;">"no matching phase in other VCSEL period timing."</span>
+    <span style="color: #dcaeea;">WrapTargetFail</span>            =   7,
+
+    <span style="color: #65737E;">// </span><span style="color: #65737E;">"Internal algo underflow or overflow in lite ranging."</span>
+    <span style="color: #65737E;">// </span><span style="color: #65737E;">ProcessingFail            =   8: not used in API</span>
+
+    <span style="color: #65737E;">// </span><span style="color: #65737E;">"Specific to lite ranging."</span>
+    <span style="color: #65737E;">// </span><span style="color: #65737E;">should never occur with this lib (which uses low power auto ranging,</span>
+    <span style="color: #65737E;">// </span><span style="color: #65737E;">as the API does)</span>
+    <span style="color: #dcaeea;">XtalkSignalFail</span>           =   9,
+
+    <span style="color: #65737E;">// </span><span style="color: #65737E;">"1st interrupt when starting ranging in back to back mode. Ignore</span>
+    <span style="color: #65737E;">// </span><span style="color: #65737E;">data."</span>
+    <span style="color: #65737E;">// </span><span style="color: #65737E;">should never occur with this lib</span>
+    <span style="color: #dcaeea;">SynchronizationInt</span>         =  10, <span style="color: #65737E;">// </span><span style="color: #65737E;">(the API spells this "syncronisation")</span>
+
+    <span style="color: #65737E;">// </span><span style="color: #65737E;">"All Range ok but object is result of multiple pulses merging together.</span>
+    <span style="color: #65737E;">// </span><span style="color: #65737E;">Used by RQL for merged pulse detection"</span>
+    <span style="color: #65737E;">// </span><span style="color: #65737E;">RangeValid MergedPulse    =  11: not used in API</span>
+
+    <span style="color: #65737E;">// </span><span style="color: #65737E;">"Used by RQL as different to phase fail."</span>
+    <span style="color: #65737E;">// </span><span style="color: #65737E;">TargetPresentLackOfSignal =  12:</span>
+
+    <span style="color: #65737E;">// </span><span style="color: #65737E;">"Target is below minimum detection threshold."</span>
+    <span style="color: #dcaeea;">MinRangeFail</span>              =  13,
+
+    <span style="color: #65737E;">// </span><span style="color: #65737E;">"The reported range is invalid"</span>
+    <span style="color: #65737E;">// </span><span style="color: #65737E;">RangeInvalid              =  14: can't actually be returned by API (range can never become negative, even after correction)</span>
+
+    <span style="color: #65737E;">// </span><span style="color: #65737E;">"No Update."</span>
+    <span style="color: #dcaeea;">None</span>                      = 255,
+<span style="color: #8FA1B3;">}</span>;
+</pre>
+</div></li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+</div>
+</body>
+</html>

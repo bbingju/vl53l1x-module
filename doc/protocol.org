@@ -1,0 +1,182 @@
+#+TITLE: Protocol Spec for VL53L1X Module
+#+LANGUAGE: ko
+# #+SETUPFILE: theme-readtheorg.setup
+# #+SETUPFILE: theme-bigblow.setup
+# #+OPTIONS: toc:nil
+#+OPTIONS: ^:{}
+#+AUTHOR: Byung-Ju Hwang
+#+EMAIL: mailto:pjhwang@gmail.com
+#+OPTIONS: prop:("VERSION")
+#+HTML_DOCTYPE: <!DOCTYPE html>
+#+HTML_HEAD: <link href="http://fonts.googleapis.com/css?family=Roboto+Slab:400,700|Inconsolata:400,700" rel="stylesheet" type="text/css" />
+# #+HTML_HEAD: <link href="css/style.css" rel="stylesheet" type="text/css" />
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="http://www.pirilampo.org/styles/readtheorg/css/htmlize.css"/>
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="http://www.pirilampo.org/styles/readtheorg/css/readtheorg.css"/>
+
+#+HTML_HEAD: <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+#+HTML_HEAD: <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+#+HTML_HEAD: <script type="text/javascript" src="http://www.pirilampo.org/styles/lib/js/jquery.stickytableheaders.js"></script>
+#+HTML_HEAD: <script type="text/javascript" src="http://www.pirilampo.org/styles/readtheorg/js/readtheorg.js"></script>
+
+#+OPTIONS: ^:{} h:4 html-postamble:nil html-preamble:t tex:t f:t
+
+#+LINK: gh    https://github.com/
+
+* ToF Message
+
+시리얼 패킷은 아래와 같이 랩핑되어 있음.
+
+#+BEGIN_EXAMPLE
+  <0xFD><0xFD> | n bytes | 2 bytes | <0xFE>
+  Preable        payload    CRC       End
+#+END_EXAMPLE
+
+    + *preamble* 2 byte =0xFDFD=
+    + *type*     1 byte
+    + *length*   1 byte
+    + *data*     n byte
+    + *crc*      2 byte
+    + *end*      1 byte =0xFE=
+
+      - length는 payload의 크기만 의미한다. 
+      - 주의: 현재 CRC check는 사용하지 않는다.
+
+** Payload
+   - Order는 Little Endian.
+
+   #+BEGIN_SRC c
+    // Header of message format
+    typedef struct __attribute__ ((packed)) {
+	uint8_t type;    // Request type
+	uint8_t length;  // Number of bytes in data
+	uint8_t data[]; // data, dependent on the type
+    } tof_msg_t;
+   #+END_SRC
+
+** Type 종류
+
+   #+BEGIN_SRC c
+     #define TOF_TYPE_STOP           0x00
+     #define TOF_TYPE_START          0x01
+     #define TOF_TYPE_CONFIG_ROI     0x02
+     #define TOF_TYPE_MEASURE_RESULT 0x03
+   #+END_SRC
+
+*** TOF_TYPE_STOP
+    + type   (0x00)
+    + length (0x00)
+	 
+    #+BEGIN_EXAMPLE
+      fd fd 00 00 0f 1d fe
+    #+END_EXAMPLE
+
+*** TOF_TYPE_START
+    + type     (0x01)
+    + length   (0x03)
+    + distance (1 byte { 0x00: short, 0x01: medium, 0x02: long })
+    + interval (2 bytes { ms 단위값, 최소 100 ms 이상 설정을 권장함 })
+
+    + 아래 예는 long distance, 100 ms 로 센서를 시작하라는 뜻.
+
+    #+BEGIN_EXAMPLE
+      fd fd 01 03 02 64 00 3e 2e fe
+    #+END_EXAMPLE
+
+*** TOF_TYPE_ROI_CONFIG
+    + type     (0x02)
+    + length   (0x30)
+    + data는 아래 구조체(4 byte)가 12개 붙어있음.
+
+      #+BEGIN_SRC c
+	struct roi_config __attribute__((packed)) {
+	    uint8_t TopLeftX;
+	    uint8_t TopLeftY;
+	    uint8_t BotRightX;
+	    uint8_t BotRightY;
+	};
+      #+END_SRC
+
+    + ROI 설정은 센서가 Stop인 경우에만 가능함.
+
+    + 예)
+      #+BEGIN_EXAMPLE
+	fd fd 02 30 04 07 07 04 00 0f 0f 00 00 0f 0f 00 00 0f 0f 00
+	00 0f 0f 00 00 0f 0f 00 00 0f 0f 00 00 0f 0f 00 00 0f 0f 00
+	00 0f 0f 00 00 0f 0f 00 00 0f 0f 00 12 34 fe
+      #+END_EXAMPLE
+
+*** TOF_TYPE_MEASURE_RESULT
+    + type     (0x04)
+    + length   (0x30)
+    + data는 아래 구조체(4 byte)가 12개 붙어있음.
+
+      #+BEGIN_SRC c
+	typedef struct __packed {
+	    uint8_t id;
+	    uint8_t status;
+	    uint16_t range_mm;
+	} measure_result_t;
+      #+END_SRC
+
+    + 멤버 중 ~status~ 는 다음과 같은 센서 상태를 의미함.
+
+      #+BEGIN_SRC c
+	enum RangeStatus
+	{
+	    RangeValid                =   0,
+
+	    // "sigma estimator check is above the internal defined threshold"
+	    // (sigma = standard deviation of measurement)
+	    SigmaFail                 =   1,
+
+	    // "signal value is below the internal defined threshold"
+	    SignalFail                =   2,
+
+	    // "Target is below minimum detection threshold."
+	    RangeValidMinRangeClipped =   3,
+
+	    // "phase is out of bounds"
+	    // (nothing detected in range; try a longer distance mode if applicable)
+	    OutOfBoundsFail           =   4,
+
+	    // "HW or VCSEL failure"
+	    HardwareFail              =   5,
+
+	    // "The Range is valid but the wraparound check has not been done."
+	    RangeValidNoWrapCheckFail =   6,
+
+	    // "Wrapped target, not matching phases"
+	    // "no matching phase in other VCSEL period timing."
+	    WrapTargetFail            =   7,
+
+	    // "Internal algo underflow or overflow in lite ranging."
+	    // ProcessingFail            =   8: not used in API
+
+	    // "Specific to lite ranging."
+	    // should never occur with this lib (which uses low power auto ranging,
+	    // as the API does)
+	    XtalkSignalFail           =   9,
+
+	    // "1st interrupt when starting ranging in back to back mode. Ignore
+	    // data."
+	    // should never occur with this lib
+	    SynchronizationInt         =  10, // (the API spells this "syncronisation")
+
+	    // "All Range ok but object is result of multiple pulses merging together.
+	    // Used by RQL for merged pulse detection"
+	    // RangeValid MergedPulse    =  11: not used in API
+
+	    // "Used by RQL as different to phase fail."
+	    // TargetPresentLackOfSignal =  12:
+
+	    // "Target is below minimum detection threshold."
+	    MinRangeFail              =  13,
+
+	    // "The reported range is invalid"
+	    // RangeInvalid              =  14: can't actually be returned by API (range can never become negative, even after correction)
+
+	    // "No Update."
+	    None                      = 255,
+	};
+      #+END_SRC
+

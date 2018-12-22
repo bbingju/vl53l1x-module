@@ -40,9 +40,6 @@ void state_loop(state_t *obj)
             obj->ops.measure_func(obj);
         break;
 
-    case STATE_CONFIG:
-        obj->curr_state = STATE_STOPPED;
-        break;
     default:
         break;
     }
@@ -68,13 +65,6 @@ void state_transit(state_t *obj, event_type_e event)
         if (obj->ops.stop_func)
             obj->ops.stop_func(obj);
         DBG_LOG("STATE_STOPPED\r\n");
-        break;
-
-    case EVENT_CONFIG:
-        obj->curr_state = STATE_CONFIG;
-        if (obj->ops.config_func)
-            obj->ops.config_func(obj);
-        DBG_LOG("STATE_CONFIG\r\n");
         break;
 
     default:

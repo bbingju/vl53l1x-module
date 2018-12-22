@@ -6,13 +6,11 @@ typedef enum {
     STATE_STOPPED,
     STATE_STARTED,
     STATE_MEASURING,
-    STATE_CONFIG,
 } state_type_e;
 
 typedef enum {
     EVENT_STOP,
     EVENT_START,
-    EVENT_CONFIG,
 } event_type_e;
 
 struct state_s;
@@ -22,7 +20,6 @@ struct state_ops_s {
     void (*start_func) (struct state_s *obj);
     void (*idle_func) (struct state_s *obj);
     void (*measure_func) (struct state_s *obj);
-    void (*config_func) (struct state_s *obj);
 };
 
 typedef struct state_s {

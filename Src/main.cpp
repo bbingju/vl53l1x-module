@@ -75,7 +75,6 @@ static void idle_callback(state_t *obj);
 static void stop_callback(state_t *obj);
 static void start_callback(state_t *obj);
 static void measuring_callback(state_t *obj);
-static void config_callback(state_t *obj);
 
 
 #ifdef USE_OFFICIAL_API
@@ -90,14 +89,7 @@ uint16_t XSHUTx[12] = { XSHUT1_Pin, XSHUT2_Pin, XSHUT3_Pin, XSHUT4_Pin,
     XSHUT9_Pin, XSHUT10_Pin, XSHUT11_Pin, XSHUT12_Pin, };
 
 
-// static state_t state_obj = {
-//     .curr_state = STATE_NONE,
-// };
-
-// uart_t uart_obj;
-CBUFFER_DEF_STATIC(uart_rxbuf, RX_BUFFER_SIZE);
-
-protocol_frame_t tx_frame;
+tof_frame_t tx_frame;
 
 struct context_s ctx;
 struct context_s *pctx;
@@ -131,42 +123,26 @@ static int handle_req()
 
 static void context_init()
 {
-    ctx.distance_mode = 3;
-    ctx.measure_interval = 100;   // ms
-
+    // set default values
+    ctx.distance_mode = 3;      // Long distance
+    ctx.measure_interval = 100; // 100 ms
 }
 
 static void idle_callback(state_t *obj)
 {
-    // uint8_t req[128] = { 0 };
-    // uint16_t size;
-    // DBG_LOG("read req from UART\r\n");
-
     HAL_UART_Receive_IT(&huart1, uart_rx_buffer, 1);
-    // int ret = uart_receive(&ctx.uart, req, &size, 0xffff);
-    // if (ret == -1) {
-    //     // DBG_LOG("%s error\r\n", __func__);
-    //     return;
-    // }
-
-    // uint8_t type = req[0];
-    // uint8_t length = req[1];
-    // if (ret > 2) {
-    //     // data exist, do something
-    // }
-    // DBG_LOG("%s: type (0x%02x), length (0x%02x)\n", __func__, type, length);
 
     if (msg_exist) {
         uint8_t type = msg_rx_buffer[0];
         uint8_t length = msg_rx_buffer[1];
 
-        DBG_LOG("%s: hexdump\r\n", __func__);
-        for (int i = 2; i < length; i++) {
-            DBG_LOG("0x%02X ", msg_rx_buffer[i]);
-            if (i % 10 == 9)
-                DBG_LOG("\r\n");
-        }
-        DBG_LOG("\r\n");
+        // DBG_LOG("%s: hexdump\r\n", __func__);
+        // for (int i = 2; i < length; i++) {
+        //     DBG_LOG("0x%02X ", msg_rx_buffer[i]);
+        //     if (i % 10 == 9)
+        //         DBG_LOG("\r\n");
+        // }
+        // DBG_LOG("\r\n");
 
         if (type == FRAME_TYPE_START) {
             DBG_LOG("%s: transit to start_state\n", __func__);
@@ -355,11 +331,13 @@ static void measuring_callback(state_t *obj)
 {
     uint32_t measure_start_tick, measure_elapsed_tick;
     measure_start_tick = HAL_GetTick();
+
 #ifndef USE_OFFICIAL_API
-  start_measuring:
+    tof_result_t *result;
     for (int i = SENSOR_START_IDX; i < SENSOR_START_IDX + SENSOR_NBR; i++) {
         sensor[i].read();
-        tof_result_t *result = &tx_frame.payload.tof_result_payload[i];
+
+        result = &tx_frame.payload.tof_results[i];
         result->id = i;
         result->status = sensor[i].ranging_data.range_status;
         result->range_mm = sensor[i].ranging_data.range_mm;
@@ -370,10 +348,9 @@ static void measuring_callback(state_t *obj)
         // DBG_LOG("\tambient: %d\n", sensor[i].ranging_data.ambient_count_rate_MCPS);
     }
     tx_frame.type = FRAME_TYPE_TOF_RESULT;
-    tx_frame.length = sizeof(tx_frame.payload.tof_result_payload);
+    tx_frame.length = sizeof(tx_frame.payload.tof_results);
     uart_send(&ctx.uart, &tx_frame, FRAME_SIZE(&tx_frame));
 #else
-  start_measuring:
     VL53L1_Error status;
     VL53L1_RangingMeasurementData_t RangingData;
     char measure_str[32] = { 0 };
@@ -416,11 +393,6 @@ static void measuring_callback(state_t *obj)
     }
 }
 
-static void config_callback(state_t *obj)
-{
-}
-
-
 /* USER CODE END 0 */
 
 /**
@@ -431,7 +403,7 @@ static void config_callback(state_t *obj)
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-    pctx = &ctx;
+  pctx = &ctx;
   /* USER CODE END 1 */
 
   /* MCU Configuration----------------------------------------------------------*/
@@ -457,14 +429,13 @@ int main(void)
   MX_USART1_UART_Init();
 
   /* USER CODE BEGIN 2 */
-  uart_init(&pctx->uart, &huart1, &uart_rxbuf);
+  uart_init(&pctx->uart, &huart1);
   state_init(&pctx->state, NULL);
   struct state_ops_s *op = &ctx.state.ops;
   op->idle_func     = idle_callback;
   op->stop_func     = stop_callback;
   op->start_func    = start_callback;
   op->measure_func  = measuring_callback;
-  op->config_func   = config_callback;
   context_init();
 
   /* USER CODE END 2 */

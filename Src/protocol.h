@@ -27,10 +27,10 @@ typedef struct __packed {
     uint8_t type;
     uint8_t length;
     union {
-        tof_result_t        tof_result_payload[12];
-        roi_config_t        roi_config[12];
+        tof_result_t        tof_results[12];
+        roi_config_t        roi_configs[12];
     } payload;
-} protocol_frame_t;
+} tof_frame_t;
 
 //Size of a given frame
 #define FRAME_SIZE(__frame_ptr__)    ((__frame_ptr__)->length + 2)
