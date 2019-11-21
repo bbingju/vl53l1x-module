@@ -1,5 +1,5 @@
 #+TITLE: VL53L1X Module
-#+OPTIONS: toc:t title:t email:t d:t
+#+OPTIONS: toc:t title:t email:t d:t ^:nil
 #+AUTHOR: Phil Hwang
 #+EMAIL: pjhwang@gmail.com
 #+LANGUAGE: ko
@@ -7,10 +7,26 @@
 
 [[file:doc/pictures/vl53l1x-module.jpg]]
 
-* Info
+* How to build
+
+  Toolchain으로 The xPack Project에서 제공하는 [[https://xpack.github.io/arm-none-eabi-gcc/][GNU Arm Embedded GCC]]을
+  사용한다. 만약 빌드 시스템에 ~xpm~ 명령어가 설치되어 있지 않다면 [[https://xpack.github.io/xpm/install/][xpm install]]
+  페이지를 참고하여 설치한다. 이 방법은 윈도우, 맥, 리눅스에서 모두 사용 가능한 방법이다.
+
+  #+BEGIN_SRC sh
+    xpm install --global @xpack-dev-tools/arm-none-eabi-gcc@latest
+  #+END_SRC
+
+  툴체인 설치가 끝나면
+  path(=/opt/xPacks/@xpack-dev-tools/arm-none-eabi-gcc= 하위 어딘가에
+  있음) 설정하고 ~make~ 를 이용하여 빌드한다.
+
+
+* Hardware
   - MCU: [[https://www.st.com/en/microcontrollers/stm32f042g6.html][STM32F042G6]]
   - ToF Sensor: [[https://www.st.com/en/imaging-and-photonics-solutions/vl53l1x.html][VL53L1X]]
 
+* Software
 ** VL53L1X
 *** [[https://my.st.com/content/my_st_com/en/products/embedded-software/proximity-sensors-software/stsw-img007.html][VL53L1X API (Application Programming Interface and documentation)]]
 

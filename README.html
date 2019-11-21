@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="ko" xml:lang="ko">
 <head>
-<!-- 2019-11-21 Thu 11:27 -->
+<!-- 2019-11-21 목 19:43 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>VL53L1X Module</title>
@@ -240,17 +240,19 @@ for the JavaScript code in this tag.
 <h2>Table of Contents</h2>
 <div id="text-table-of-contents">
 <ul>
-<li><a href="#orgbfbfc33">1. Info</a>
+<li><a href="#orga8e12e3">1. How to build</a></li>
+<li><a href="#org33784d5">2. Hardware</a></li>
+<li><a href="#org68fb9f2">3. Software</a>
 <ul>
-<li><a href="#org75c1ba4">1.1. VL53L1X</a>
+<li><a href="#orgd9ba5ff">3.1. VL53L1X</a>
 <ul>
-<li><a href="#org452bbaf">1.1.1. VL53L1X API (Application Programming Interface and documentation)</a></li>
+<li><a href="#orge59b7c7">3.1.1. VL53L1X API (Application Programming Interface and documentation)</a></li>
 </ul>
 </li>
-<li><a href="#org458911f">1.2. Protocol</a>
+<li><a href="#orgc5d1072">3.2. Protocol</a>
 <ul>
-<li><a href="#org9df8946">1.2.1. Frame</a></li>
-<li><a href="#org03a42e1">1.2.2. Type 종류</a></li>
+<li><a href="#org9f9dd49">3.2.1. Frame</a></li>
+<li><a href="#orgbabd675">3.2.2. Type 종류</a></li>
 </ul>
 </li>
 </ul>
@@ -264,27 +266,55 @@ for the JavaScript code in this tag.
 </p>
 </div>
 
-<div id="outline-container-orgbfbfc33" class="outline-2">
-<h2 id="orgbfbfc33"><span class="section-number-2">1</span> Info</h2>
+<div id="outline-container-orga8e12e3" class="outline-2">
+<h2 id="orga8e12e3"><span class="section-number-2">1</span> How to build</h2>
 <div class="outline-text-2" id="text-1">
+<p>
+Toolchain으로 The xPack Project에서 제공하는 <a href="https://xpack.github.io/arm-none-eabi-gcc/">GNU Arm Embedded GCC</a>을
+사용한다. 만약 빌드 시스템에 <code>xpm</code> 명령어가 설치되어 있지 않다면 <a href="https://xpack.github.io/xpm/install/">xpm install</a>
+페이지를 참고하여 설치한다. 이 방법은 윈도우, 맥, 리눅스에서 모두 사용 가능한 방법이다.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">xpm install --global @xpack-dev-tools/arm-none-eabi-gcc@latest
+</pre>
+</div>
+
+<p>
+툴체인 설치가 끝나면
+path(<code>/opt/xPacks/@xpack-dev-tools/arm-none-eabi-gcc</code> 하위 어딘가에
+있음) 설정하고 <code>make</code> 를 이용하여 빌드한다.
+</p>
+</div>
+</div>
+
+
+<div id="outline-container-org33784d5" class="outline-2">
+<h2 id="org33784d5"><span class="section-number-2">2</span> Hardware</h2>
+<div class="outline-text-2" id="text-2">
 <ul class="org-ul">
 <li>MCU: <a href="https://www.st.com/en/microcontrollers/stm32f042g6.html">STM32F042G6</a></li>
 <li>ToF Sensor: <a href="https://www.st.com/en/imaging-and-photonics-solutions/vl53l1x.html">VL53L1X</a></li>
 </ul>
 </div>
-
-<div id="outline-container-org75c1ba4" class="outline-3">
-<h3 id="org75c1ba4"><span class="section-number-3">1.1</span> VL53L1X</h3>
-<div class="outline-text-3" id="text-1-1">
-</div>
-<div id="outline-container-org452bbaf" class="outline-4">
-<h4 id="org452bbaf"><span class="section-number-4">1.1.1</span> <a href="https://my.st.com/content/my_st_com/en/products/embedded-software/proximity-sensors-software/stsw-img007.html">VL53L1X API (Application Programming Interface and documentation)</a></h4>
-</div>
 </div>
 
-<div id="outline-container-org458911f" class="outline-3">
-<h3 id="org458911f"><span class="section-number-3">1.2</span> Protocol</h3>
-<div class="outline-text-3" id="text-1-2">
+<div id="outline-container-org68fb9f2" class="outline-2">
+<h2 id="org68fb9f2"><span class="section-number-2">3</span> Software</h2>
+<div class="outline-text-2" id="text-3">
+</div>
+<div id="outline-container-orgd9ba5ff" class="outline-3">
+<h3 id="orgd9ba5ff"><span class="section-number-3">3.1</span> VL53L1X</h3>
+<div class="outline-text-3" id="text-3-1">
+</div>
+<div id="outline-container-orge59b7c7" class="outline-4">
+<h4 id="orge59b7c7"><span class="section-number-4">3.1.1</span> <a href="https://my.st.com/content/my_st_com/en/products/embedded-software/proximity-sensors-software/stsw-img007.html">VL53L1X API (Application Programming Interface and documentation)</a></h4>
+</div>
+</div>
+
+<div id="outline-container-orgc5d1072" class="outline-3">
+<h3 id="orgc5d1072"><span class="section-number-3">3.2</span> Protocol</h3>
+<div class="outline-text-3" id="text-3-2">
 <ul class="org-ul">
 <li>115200 8N1 사용함.</li>
 <li><p>
@@ -312,9 +342,9 @@ Preable        data      CRC       End
 </ul>
 </div>
 
-<div id="outline-container-org9df8946" class="outline-4">
-<h4 id="org9df8946"><span class="section-number-4">1.2.1</span> Frame</h4>
-<div class="outline-text-4" id="text-1-2-1">
+<div id="outline-container-org9f9dd49" class="outline-4">
+<h4 id="org9f9dd49"><span class="section-number-4">3.2.1</span> Frame</h4>
+<div class="outline-text-4" id="text-3-2-1">
 <ul class="org-ul">
 <li>Order는 Little Endian.</li>
 </ul>
@@ -331,9 +361,9 @@ Preable        data      CRC       End
 </div>
 </div>
 
-<div id="outline-container-org03a42e1" class="outline-4">
-<h4 id="org03a42e1"><span class="section-number-4">1.2.2</span> Type 종류</h4>
-<div class="outline-text-4" id="text-1-2-2">
+<div id="outline-container-orgbabd675" class="outline-4">
+<h4 id="orgbabd675"><span class="section-number-4">3.2.2</span> Type 종류</h4>
+<div class="outline-text-4" id="text-3-2-2">
 <div class="org-src-container">
 <pre class="src src-c"><span style="color: #51afef; font-weight: bold;">#define</span> <span style="color: #dcaeea;">TOF_TYPE_STOP</span>           0x00
 <span style="color: #51afef; font-weight: bold;">#define</span> <span style="color: #dcaeea;">TOF_TYPE_START</span>          0x01
@@ -344,8 +374,8 @@ Preable        data      CRC       End
 </div>
 
 <ol class="org-ol">
-<li><a id="org041da51"></a>TOF<sub>TYPE</sub><sub>STOP</sub><br />
-<div class="outline-text-5" id="text-1-2-2-1">
+<li><a id="org09ee91f"></a>TOF_TYPE_STOP<br />
+<div class="outline-text-5" id="text-3-2-2-1">
 <ul class="org-ul">
 <li>type   (0x00)</li>
 <li>length (0x00)</li>
@@ -357,8 +387,8 @@ fd fd 00 00 0f 1d fe
 </div>
 </li>
 
-<li><a id="org4e44ccf"></a>TOF<sub>TYPE</sub><sub>START</sub><br />
-<div class="outline-text-5" id="text-1-2-2-2">
+<li><a id="org8fcfabe"></a>TOF_TYPE_START<br />
+<div class="outline-text-5" id="text-3-2-2-2">
 <ul class="org-ul">
 <li>type     (0x01)</li>
 <li>length   (0x03)</li>
@@ -374,8 +404,8 @@ fd fd 01 03 02 64 00 3e 2e fe
 </div>
 </li>
 
-<li><a id="org6968425"></a>TOF<sub>TYPE</sub><sub>ROI</sub><sub>CONFIG</sub><br />
-<div class="outline-text-5" id="text-1-2-2-3">
+<li><a id="orgd3ff10f"></a>TOF_TYPE_ROI_CONFIG<br />
+<div class="outline-text-5" id="text-3-2-2-3">
 <ul class="org-ul">
 <li>type     (0x02)</li>
 <li>length   (0x30)</li>
@@ -407,8 +437,8 @@ fd fd 02 30 04 07 07 04 00 0f 0f 00 00 0f 0f 00 00 0f 0f 00
 </div>
 </li>
 
-<li><a id="org99b24bb"></a>TOF<sub>TYPE</sub><sub>MEASURE</sub><sub>RESULT</sub><br />
-<div class="outline-text-5" id="text-1-2-2-4">
+<li><a id="org74fbe5f"></a>TOF_TYPE_MEASURE_RESULT<br />
+<div class="outline-text-5" id="text-3-2-2-4">
 <ul class="org-ul">
 <li>type     (0x04)</li>
 <li>length   (0x30)</li>
@@ -500,7 +530,7 @@ data는 아래 구조체(4 byte)가 12개 붙어있음.
 <div id="postamble" class="status">
 <p class="author">Author: Phil Hwang</p>
 <p class="email">Email: <a href="mailto:pjhwang@gmail.com">pjhwang@gmail.com</a></p>
-<p class="date">Created: 2019-11-21 Thu 11:27</p>
+<p class="date">Created: 2019-11-21 목 19:43</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
 </body>
